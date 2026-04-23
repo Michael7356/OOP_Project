@@ -9,7 +9,8 @@ add_executable(OOP_Project Transaction.h
         Store.cpp
         Store.h
         PdfParser.cpp
-        PdfParser.h)
+        PdfParser.h
+)
 
 set(MSYS_PATH "C:/msys64/ucrt64")
 
@@ -21,3 +22,9 @@ include_directories("${MSYS_PATH}/include/poppler/cpp")
 link_directories("${MSYS_PATH}/lib")
 
 target_link_libraries(OOP_Project poppler-cpp)
+
+if(WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0A00)
+endif()
+
+target_link_libraries(OOP_Project ws2_32)

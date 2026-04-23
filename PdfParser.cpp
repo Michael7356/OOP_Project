@@ -22,7 +22,7 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
             std::string line;
 
             while (getline(ss, line)) {
-                Transaction t("", "", 0.0, "");
+                Transaction t("", "", "", 0.0, "");
                 if (processLine(line, t)) {
                     result.push_back(t);
                 }
@@ -51,6 +51,7 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
     if (std::regex_search(line, match, pattern)) {
         std::string dateAndTime = match[1];
         std::string date = match[1].str().substr(0,10);
+        std::string time = match[1].str().substr(11,5);
         std::string summary = match[2];
         std::string amount_str = match[3];
         std::string balance = match[4];
@@ -77,7 +78,7 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
             }
 
             std::string category = (description.find("ＧＯＯＧＬＥ") != std::string::npos) ? "Subscription" : "General";
-            outTransaction = Transaction(date, category, amount, description);
+            outTransaction = Transaction(date, time, category, amount, description);
             return true;
         }
         catch (...) {

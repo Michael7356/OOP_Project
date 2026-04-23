@@ -7,24 +7,30 @@
 #include <sstream>
 #include <poppler/cpp/poppler-document.h>
 #include <poppler/cpp/poppler-page.h>
+#include "httplib.h"
+#include "json.hpp"
 
 
-Transaction::Transaction(std::string d, std::string c, const double a, std::string n)
-    : date(std::move(d)), category(std::move(c)), amount(a), note(std::move(n)) {}
+Transaction::Transaction(std::string d, std::string t, std::string c, const double a, std::string n)
+    : date(std::move(d)), time(std::move(t)), category(std::move(c)), amount(a), note(std::move(n)) {}
 
 void Transaction::display() const {
-    std::cout << std::left <<std::setw(12) << date << std::setw(10) << category << std::setw(8) << amount << " | " << note << std::endl;
+    std::cout << std::left <<std::setw(12) << date << std::setw(10) << time << std::setw(8) << category << std::setw(6) << amount << " | " << note << std::endl;
 }
 
 void Transaction::saveToFile(const std::vector<Transaction>& records, const std::string& filename) {
-    std::ofstream outFile(filename);
+    std::ifstream inFile(filename);
+    bool isNew = !inFile.is_open() || inFile.peek() == std::ifstream::traits_type::eof();
+    inFile.close();
 
+    std::ofstream outFile(filename, std::ios::out|std::ios::app);
     if (outFile.is_open()) {
-        outFile << "\xEF\xBB\xBF";
-        outFile << "Date,Category,Amount,Note\n";
-
+        if (isNew){
+            outFile << "\xEF\xBB\xBF Date,Time,Category,Amount,Note\n";
+        }
         for (const auto& record : records) {
             outFile << record.getDate() << ","
+                    << record.getTime() << ","
                     << record.getCategory() << ","
                     << record.getAmount() << ","
                     << record.getNote() << "\n";
@@ -48,9 +54,10 @@ std::vector<Transaction> Transaction::loadFromFile(const std::string& filename) 
     std::getline(inFile, line);
     while (std::getline(inFile, line)) {
         std::stringstream ss(line);
-        std::string d, c, a_str, n;
+        std::string d, c, a_str, n, t;
 
         std::getline(ss, d, ',');
+        std::getline(ss, t, ',');
         std::getline(ss, c, ',');
         std::getline(ss, a_str, ',');
         std::getline(ss, n, ',');
@@ -58,7 +65,7 @@ std::vector<Transaction> Transaction::loadFromFile(const std::string& filename) 
         try {
             if (!a_str.empty()) {
                 double a = std::stod(a_str);
-                tempRecords.emplace_back(d, c, a, n);
+                tempRecords.emplace_back(d, t, c, a, n);
             }
         }
         catch (std::invalid_argument& e) {
