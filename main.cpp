@@ -195,12 +195,11 @@ int main() {
                     myBookkeeping.insert(myBookkeeping.end(), imported.begin(), imported.end());
                     std::cout << "Success" << std::endl;
                 }
-
                 break;
             }
 
             case 4: {
-                Transaction::saveToFile(myBookkeeping, "Something.csv");
+                Transaction::saveToFile(myBookkeeping, config.csv_filename);
                 std::cout << "Complete"<< std::endl;
                 break;
             }
