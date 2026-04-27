@@ -120,15 +120,17 @@ int main() {
 
     httplib::Server server;
     server.Get("/", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content("<h1>Hello World! HJAAH<h1>", "text/html");
+        res.set_content("<h1>Hello World!<h1>", "text/html");
     });
     server.Post("/sms", [](const httplib::Request& req, httplib::Response& res) {
         try {
+            Config config = loadConfig();
             auto j = json::parse(req.body);
             std::string smsText = j.at("message").get<std::string>();
             std::cout << "\nReceive message: " << smsText << std::endl;
-
-            if (resolvingRegex_Mail(smsText)) {
+            Transaction temp = resolvingRegex_Mail(smsText).value();
+            if (!temp.getDate().empty()) {
+                Transaction::saveToFile({temp}, config.csv_filename);
                 res.set_content("Succuss", "text/plain");
             }
             else {
@@ -212,8 +214,6 @@ int main() {
                 std::cout << "Not a valid choice" << std::endl;
             }
     }
-
-
 
     return 0;
 }
