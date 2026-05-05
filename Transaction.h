@@ -25,6 +25,7 @@ public:
 
     static std::vector<Transaction> loadFromFile(const std::string &filename);
 
+    static void extractFromFile(const std::string& filepath, const std::string& password);
 };
 
 #endif

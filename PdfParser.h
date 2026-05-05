@@ -5,6 +5,7 @@
 #include "Transaction.h"
 #include <string>
 #include <map>
+#include <optional>
 #pragma once
 
 class PdfParser {
@@ -14,7 +15,19 @@ private:
 
 public:
     static std::vector<Transaction> parseBankStatement(const std::string& filepath, const std::string& password);
+
     static void addCategoryMapping(const std::string& keyword, const std::string& categoryName);
+
+    static std::optional<Transaction> resolvingRegex_Mail(std::string smsText);
+
+    struct Config {
+        std::string script_ID;
+        int port;
+        std::string csv_filename;
+        std::string deposit;
+    };
+
+    static Config loadConfig();
 
 };
 

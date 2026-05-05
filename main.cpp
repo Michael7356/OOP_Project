@@ -11,23 +11,11 @@
 #include <fstream>
 
 using json = nlohmann::json;
-
 struct Config {
     std::string script_ID;
     int port;
     std::string csv_filename;
     std::string deposit;
-};
-
-Config loadConfig() {
-    std::ifstream inFile("config.json");
-    if (!inFile) {
-        std::cerr << "hi" <<std::endl;
-        return {"DEFAULT_ID", 8080};
-    }
-    json j;
-    inFile >> j;
-    return {j["google_script_id"], j["port"], j["csv_path"], j["deposit"]};
 };
 
 void menu() {
@@ -40,44 +28,8 @@ void menu() {
     std::cout << "Type 1-5 to using this program" << std::endl;
 }
 
-void extractFromFile(const std::string& filepath, const std::string& password) {
-    poppler::document* doc = poppler::document::load_from_file(filepath, password);
-    if (!doc) {
-        std::cerr << "Could not load file " << filepath << std::endl;
-        return;
-    }
-
-    for (int i = 0 ; i < doc->pages() ; ++i) {
-        poppler::page* p = doc->create_page(i);
-        if (p) {
-            std::string pageText = p->text().to_utf8().data();
-            std::cout << "Page: " << i + 1 << std::endl;
-            std::cout << pageText << std::endl;
-            delete p;
-        }
-    }
-    delete doc;
-}
-
-std::optional<Transaction> resolvingRegex_Mail(std::string smsText) {
-    std::regex pattern (R"(.*?(\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?\d{4}.*?(\d{1,6}).*?)");
-    std::smatch match;
-    Config config = loadConfig();
-    if (std::regex_search(smsText, match, pattern)) {
-        std::string date = match[1];
-        std::string time = match[2];
-        std::string amountStr = match[3];
-        std::erase(amountStr, ',');
-        double amount = std::stod(amountStr);
-        Transaction t = {date, time, "", amount, ""};
-        return t;
-    }
-    std::cout << "Can't resolve the format of message" << std::endl;
-    return std::nullopt;
-}
-
 void syncWithGoogle() {
-    Config config = loadConfig();
+    PdfParser::Config config = PdfParser::loadConfig();
     std::cout << "Catching data from cloud" << std::endl;
     std::string url = "https://script.google.com/macros/s/" + config.script_ID + "/exec";
     std::string cmd = "curl -s -L -A \"Mozilla/5.0\" -o temp_sync.json \"" + url + "\"";
@@ -95,7 +47,7 @@ void syncWithGoogle() {
             auto data = json::parse(content);
             std::vector<Transaction> temp;
             for (auto& item : data) {
-                Transaction t = resolvingRegex_Mail(item["message"]).value();
+                Transaction t = PdfParser::resolvingRegex_Mail(item["message"]).value();
                 temp.push_back(t);
             }
             Transaction::saveToFile(temp, config.csv_filename);
@@ -107,43 +59,11 @@ void syncWithGoogle() {
     }
 }
 
-void runServer (httplib::Server* server) {
-    std::cout <<  "server is start, wait for connection from phone" << std::endl;
-    server->listen("0.0.0.0", 8080);
-}
-
 int main() {
 
     SetConsoleOutputCP(CP_UTF8);
 
-    const Config config = loadConfig();
-
-    httplib::Server server;
-    server.Get("/", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content("<h1>Hello World!<h1>", "text/html");
-    });
-    server.Post("/sms", [](const httplib::Request& req, httplib::Response& res) {
-        try {
-            Config config = loadConfig();
-            auto j = json::parse(req.body);
-            std::string smsText = j.at("message").get<std::string>();
-            std::cout << "\nReceive message: " << smsText << std::endl;
-            Transaction temp = resolvingRegex_Mail(smsText).value();
-            if (!temp.getDate().empty()) {
-                Transaction::saveToFile({temp}, config.csv_filename);
-                res.set_content("Succuss", "text/plain");
-            }
-            else {
-                res.status = 400;
-            }
-        }catch (const std::exception& e) {
-            std::cerr << "JSON resolving fail" << e.what() << std::endl;
-            res.status = 400;
-        }
-    });
-
-    std::thread serverThread(runServer, &server);
-    serverThread.detach(); // Run in background
+    const PdfParser::Config config = PdfParser::loadConfig();
 
     syncWithGoogle();
 

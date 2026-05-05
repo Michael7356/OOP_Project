@@ -10,7 +10,6 @@
 #include "httplib.h"
 #include "json.hpp"
 
-
 Transaction::Transaction(std::string d, std::string t, std::string c, const double a, std::string n)
     : date(std::move(d)), time(std::move(t)), category(std::move(c)), amount(a), note(std::move(n)) {}
 
@@ -79,4 +78,23 @@ std::vector<Transaction> Transaction::loadFromFile(const std::string& filename) 
     }
     inFile.close();
     return tempRecords;
+}
+
+void Transaction::extractFromFile(const std::string& filepath, const std::string& password) {
+    poppler::document* doc = poppler::document::load_from_file(filepath, password);
+    if (!doc) {
+        std::cerr << "Could not load file " << filepath << std::endl;
+        return;
+    }
+
+    for (int i = 0 ; i < doc->pages() ; ++i) {
+        poppler::page* p = doc->create_page(i);
+        if (p) {
+            std::string pageText = p->text().to_utf8().data();
+            std::cout << "Page: " << i + 1 << std::endl;
+            std::cout << pageText << std::endl;
+            delete p;
+        }
+    }
+    delete doc;
 }

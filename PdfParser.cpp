@@ -5,6 +5,29 @@
 #include <poppler-page.h>
 #include <sstream>
 #include <map>
+#include <optional>
+#include "httplib.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
+
+struct Config {
+    std::string script_ID;
+    int port;
+    std::string csv_filename;
+    std::string deposit;
+};
+
+PdfParser::Config PdfParser::loadConfig() {
+    std::ifstream inFile("config.json");
+    if (!inFile) {
+        std::cerr << "hi" <<std::endl;
+        return {"DEFAULT_ID", 8080};
+    }
+    json j;
+    inFile >> j;
+    return {j["google_script_id"], j["port"], j["csv_path"], j["deposit"]};
+};
 
 std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepath, const std::string& password) {
     std::vector<Transaction> result;
@@ -42,7 +65,6 @@ std::map <std::string, std::string> PdfParser::categoryMap = {
     {"美聯社","美聯社"},
     {"ＡＰＰＬＥ", "Apple"},
     {"ＳＴＥＡＭ", "Steam"}
-
 };
 
 bool PdfParser::processLine(const std::string& line, Transaction& outTransaction) {
@@ -86,4 +108,21 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
         }
     }
     return false;
+}
+
+std::optional<Transaction> PdfParser::resolvingRegex_Mail(std::string smsText) {
+    std::regex pattern (R"(.*?(\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?\d{4}.*?(\d{1,6}).*?)");
+    std::smatch match;
+    Config config = loadConfig();
+    if (std::regex_search(smsText, match, pattern)) {
+        std::string date = match[1];
+        std::string time = match[2];
+        std::string amountStr = match[3];
+        std::erase(amountStr, ',');
+        double amount = std::stod(amountStr);
+        Transaction t = {date, time, "", amount, ""};
+        return t;
+    }
+    std::cout << "Can't resolve the format of message" << std::endl;
+    return std::nullopt;
 }
