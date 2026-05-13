@@ -19,11 +19,30 @@ def load_config():
     with open(config_path, "r", encoding='utf-8') as f:
         config = json.load(f)
     return config
+
+def wait_for_download(driver, timeout= 30):
+    driver.get("chrome://downloads/")
+    end_time = time.time() + timeout
+    while True:
+        try:
+            progress = driver.execute_script("""
+                var items = document.querySelector('downloads-manager').shadowRoot.querySelectorAll('downloads-item');
+                if (items.length === 0) return 0;
+                return items[0].shadowRoot.querySelector('#progress').value;
+            """)
+            if progress == 100:
+                return True
+        except:
+            pass
+        if time.time() > end_time:
+            return False
+        time.sleep(1)
+
 config = load_config()
 Account = config["Account"]
 Password = config["Password"]
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+# chrome_options.add_argument("--headless")
 chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_experimental_option("detach", True)
 
@@ -109,6 +128,8 @@ try:
     )
     actions.move_to_element(download_file).perform()
     download_file.click()
+    time.sleep(5)
+    driver.quit()
 
 except Exception as e:
     driver.save_screenshot("error_screenshot.png") # 儲存當下的畫面

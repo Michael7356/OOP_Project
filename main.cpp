@@ -11,12 +11,6 @@
 #include <fstream>
 
 using json = nlohmann::json;
-struct Config {
-    std::string script_ID;
-    int port;
-    std::string csv_filename;
-    std::string deposit;
-};
 
 void menu() {
     std::cout << "Welcome to my bookkeeping." << std::endl;
@@ -59,6 +53,33 @@ void syncWithGoogle() {
     }
 }
 
+bool callPython() {
+    std::string Pypath = R"(..\Python_auto\.venv\Scripts\python.exe)";
+    std::string script = "..\\Python_auto\\main.py";
+
+    std::string command = Pypath + " " + script;
+    std::cout << "Hold on a second" << std::endl;
+
+    int result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Failed to run script" << std::endl;
+        std::cout << "Do you want to call it again? [y or n]" << std::endl;
+        std::string input;
+        while (std::cin >> input) {
+            if(input == "y" || input == "Y" || input == "N"|| input == "n") {
+                if (input == "y" || input == "Y") {
+                    callPython();
+                    break;
+                }
+                return false;
+            }
+            std::cout << "Not a valid choice" << std::endl;
+        }
+    }
+    std::cout << "Success" << std::endl;
+    return true;
+}
+
 int main() {
 
     SetConsoleOutputCP(CP_UTF8);
@@ -67,7 +88,7 @@ int main() {
 
     syncWithGoogle();
 
-    std::vector<Transaction> myBookkeeping = Transaction::loadFromFile(config.csv_filename);
+    std::vector<Transaction> myBookkeeping = PdfParser::loadFromFile(config.csv_filename);
 
     int choice = 0;
     while (choice != 4 && choice != 5) {
@@ -82,15 +103,27 @@ int main() {
         std::cin.ignore(1000, '\n');
         switch (choice) {
             case 1: {
-                std::string d,c,n,t;
-                double a;
-                std::cout << "Date (YYYY-MM-DD): "; std::cin >> d;
-                std::cout << "Time (HH:mm): "; std::cin >> t;
-                std::cout << "Category: "; std::cin >> c;
-                std::cout << "Amount: "; std::cin >> a;
-                std::cout << "Note: "; std::cin >> n;
-                myBookkeeping.emplace_back(d,t,c,a,n);
-                std::cout << "Complete"<< std::endl;
+                // std::string d,c,n,t;
+                // double a;
+                // std::cout << "Date (YYYY-MM-DD): "; std::cin >> d;
+                // std::cout << "Time (HH:mm): "; std::cin >> t;
+                // std::cout << "Category: "; std::cin >> c;
+                // std::cout << "Amount: "; std::cin >> a;
+                // std::cout << "Note: "; std::cin >> n;
+                // myBookkeeping.emplace_back(d,t,c,a,n);
+                // std::cout << "Complete"<< std::endl;
+                if(callPython()){
+                    std::string path = PdfParser::getCSVfile("downloads");
+                    std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
+                    receipt::saveToFile(receipt_all, config.csv_filename);
+                    std::cout << "Alright, here's result" << std::endl;
+                    double totalAmount = 0;
+                    for (const auto& item : receipt_all) {
+                        totalAmount += item.getAmount();
+                        item.display();
+                    }
+                    std::cout << "Total amount: " << totalAmount << std::endl;
+                }
                 break;
                 }
 

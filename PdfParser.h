@@ -29,6 +29,14 @@ public:
 
     static Config loadConfig();
 
+    static std::string getCSVfile(const std::string& dirPath);
+
+    static std::vector<Transaction> loadFromFile(const std::string &filename);
+};
+
+class csvParser : public PdfParser {
+public:
+    static std::vector<receipt> loadFromFile (const std::string &filename) ;
 };
 
 

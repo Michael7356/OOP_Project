@@ -8,8 +8,10 @@
 #include <optional>
 #include "httplib.h"
 #include "json.hpp"
+#include <filesystem>
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 struct Config {
     std::string script_ID;
@@ -21,7 +23,7 @@ struct Config {
 PdfParser::Config PdfParser::loadConfig() {
     std::ifstream inFile("config.json");
     if (!inFile) {
-        std::cerr << "hi" <<std::endl;
+        std::cerr << "Error at loadConfig" <<std::endl;
         return {"DEFAULT_ID", 8080};
     }
     json j;
@@ -125,4 +127,93 @@ std::optional<Transaction> PdfParser::resolvingRegex_Mail(std::string smsText) {
     }
     std::cout << "Can't resolve the format of message" << std::endl;
     return std::nullopt;
+}
+
+std::string PdfParser::getCSVfile(const std::string& path) {
+    fs::path file;
+    fs::file_time_type time;
+
+    for (const auto& entry : fs::directory_iterator(path)) {
+        if (entry.path().extension() == ".csv") {
+            if (file.empty() || fs::last_write_time(entry) > time) {
+                file = entry.path();
+                time = fs::last_write_time(entry);
+            }
+        }
+    }
+    return file.string();
+}
+
+std::vector<Transaction> PdfParser::loadFromFile(const std::string& filename) {
+    std::vector<Transaction> tempRecords;
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        std::cerr << "Error opening file " << filename << std::endl;
+        return tempRecords;
+    }
+    std::string line;
+    std::getline(inFile, line);
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        std::string d, c, a_str, n, t;
+
+        std::getline(ss, d, ',');
+        std::getline(ss, t, ',');
+        std::getline(ss, c, ',');
+        std::getline(ss, a_str, ',');
+        std::getline(ss, n, ',');
+
+        try {
+            if (!a_str.empty()) {
+                double a = std::stod(a_str);
+                tempRecords.emplace_back(d, t, c, a, n);
+            }
+        }
+        catch (std::invalid_argument& e) {
+            std::cerr << "Continue" << std::endl;
+            continue;
+        }
+    }
+    inFile.close();
+    return tempRecords;
+}
+
+std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
+    std::vector<receipt> tempRecords;
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        std::cerr << "Error opening file " << filename<< std::endl;
+        return tempRecords;
+    }
+    std::string line;
+    std::getline(inFile, line); // We don't need first and last line
+    bool cont = true;
+    std::vector<std::string> tokens;
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        std::vector<std::string> temp;
+        std::string input;
+        for (int i = 0 ; i < 14 ; i ++) {
+            std::getline(ss,input, ',');
+            if (input == "捐贈或作廢之發票，字軌號碼均會隱末3碼") {
+                cont = false;
+                break;
+            }
+            temp.push_back(input);
+        }
+        if (!cont) break;
+        std::string amountStr = temp[3];
+        try {
+            if (!amountStr.empty()) {
+                double amount = std::stod(amountStr);
+                tempRecords.emplace_back(temp[1], "No Time", temp[7], amount, temp[13], temp[2]);
+            }
+        }
+        catch (std::invalid_argument& e) {
+            std::cerr << "Error when trying to convert " << input << std::endl;
+        }
+
+    }
+    inFile.close();
+    return tempRecords;
 }
