@@ -3,7 +3,7 @@
 #include "Transaction.h"
 #include "PdfParser.h"
 #include <poppler-document.h>
-#include <poppler-page.h>
+#include "DataManager.h"
 #include <windows.h>
 #include <regex>
 #include "httplib.h"
@@ -88,7 +88,7 @@ int main() {
 
     syncWithGoogle();
 
-    std::vector<Transaction> myBookkeeping = PdfParser::loadFromFile(config.csv_filename);
+    std::vector<std::shared_ptr<Transaction>> myBookkeeping = DataManager::loadFromFile(config.csv_filename);
 
     int choice = 0;
     while (choice != 4 && choice != 5) {
@@ -112,10 +112,14 @@ int main() {
                 // std::cout << "Note: "; std::cin >> n;
                 // myBookkeeping.emplace_back(d,t,c,a,n);
                 // std::cout << "Complete"<< std::endl;
+
                 if(callPython()){
                     std::string path = PdfParser::getCSVfile("downloads");
                     std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
-                    receipt::saveToFile(receipt_all, config.csv_filename);
+                    receipt::checkUnique(receipt_all, config.csv_filename);
+                    for (const auto& r : receipt_all) {
+                        myBookkeeping.push_back(std::make_shared<receipt>(r));
+                    }
                     std::cout << "Alright, here's result" << std::endl;
                     double totalAmount = 0;
                     for (const auto& item : receipt_all) {
@@ -124,15 +128,16 @@ int main() {
                     }
                     std::cout << "Total amount: " << totalAmount << std::endl;
                 }
+
                 break;
                 }
 
             case 2: {
                 double total = 0;
-                std::cout << "\nDate    Time    Category      Cost     | Note\n";
+                std::cout << "\nType    Date    Time    Category      Cost     | Note\n";
                 for (const auto& record : myBookkeeping) {
-                    record.display();
-                    total +=  record.getAmount();
+                    record->display();
+                    total +=  record->getAmount();
                 }
                 std::cout << "\nYou've spent " << total << std::endl;
                 break;
@@ -147,14 +152,17 @@ int main() {
                     std::cerr << "Import failed" << std::endl;
                 }
                 else {
-                    myBookkeeping.insert(myBookkeeping.end(), imported.begin(), imported.end());
+                    for (const auto& item : imported) {
+                        myBookkeeping.push_back(std::make_shared<Transaction>(item));
+                    }
                     std::cout << "Success" << std::endl;
                 }
                 break;
             }
 
             case 4: {
-                Transaction::saveToFile(myBookkeeping, config.csv_filename);
+                std::ranges::sort(myBookkeeping, DataManager::compare);
+                DataManager::saveToFile(myBookkeeping, config.csv_filename);
                 std::cout << "Complete"<< std::endl;
                 break;
             }

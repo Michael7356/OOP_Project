@@ -47,8 +47,7 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
             std::string line;
 
             while (getline(ss, line)) {
-                Transaction t("", "", "", 0.0, "");
-                if (processLine(line, t)) {
+                if (Transaction t("","", "", "", 0.0, ""); processLine(line, t)) {
                     result.push_back(t);
                 }
             }
@@ -102,7 +101,7 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
             }
 
             std::string category = (description.find("ＧＯＯＧＬＥ") != std::string::npos) ? "Subscription" : "General";
-            outTransaction = Transaction(date, time, category, amount, description);
+            outTransaction = Transaction("Bank", date, time, category, amount, description);
             return true;
         }
         catch (...) {
@@ -122,7 +121,7 @@ std::optional<Transaction> PdfParser::resolvingRegex_Mail(std::string smsText) {
         std::string amountStr = match[3];
         std::erase(amountStr, ',');
         double amount = std::stod(amountStr);
-        Transaction t = {date, time, "", amount, ""};
+        Transaction t = {"Bank", date, time, "", amount, ""};
         return t;
     }
     std::cout << "Can't resolve the format of message" << std::endl;
@@ -144,39 +143,6 @@ std::string PdfParser::getCSVfile(const std::string& path) {
     return file.string();
 }
 
-std::vector<Transaction> PdfParser::loadFromFile(const std::string& filename) {
-    std::vector<Transaction> tempRecords;
-    std::ifstream inFile(filename);
-    if (!inFile.is_open()) {
-        std::cerr << "Error opening file " << filename << std::endl;
-        return tempRecords;
-    }
-    std::string line;
-    std::getline(inFile, line);
-    while (std::getline(inFile, line)) {
-        std::stringstream ss(line);
-        std::string d, c, a_str, n, t;
-
-        std::getline(ss, d, ',');
-        std::getline(ss, t, ',');
-        std::getline(ss, c, ',');
-        std::getline(ss, a_str, ',');
-        std::getline(ss, n, ',');
-
-        try {
-            if (!a_str.empty()) {
-                double a = std::stod(a_str);
-                tempRecords.emplace_back(d, t, c, a, n);
-            }
-        }
-        catch (std::invalid_argument& e) {
-            std::cerr << "Continue" << std::endl;
-            continue;
-        }
-    }
-    inFile.close();
-    return tempRecords;
-}
 
 std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
     std::vector<receipt> tempRecords;
@@ -206,7 +172,7 @@ std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
         try {
             if (!amountStr.empty()) {
                 double amount = std::stod(amountStr);
-                tempRecords.emplace_back(temp[1], "No Time", temp[7], amount, temp[13], temp[2]);
+                tempRecords.emplace_back("Receipt", temp[1], "No Time", temp[7], amount, temp[13], temp[2]);
             }
         }
         catch (std::invalid_argument& e) {
@@ -217,3 +183,4 @@ std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
     inFile.close();
     return tempRecords;
 }
+

@@ -128,7 +128,7 @@ try:
     )
     actions.move_to_element(download_file).perform()
     download_file.click()
-    time.sleep(5)
+    time.sleep(7)
     driver.quit()
 
 except Exception as e:

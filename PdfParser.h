@@ -31,7 +31,6 @@ public:
 
     static std::string getCSVfile(const std::string& dirPath);
 
-    static std::vector<Transaction> loadFromFile(const std::string &filename);
 };
 
 class csvParser : public PdfParser {

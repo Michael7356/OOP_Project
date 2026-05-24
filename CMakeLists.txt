@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(OOP_Project Transaction.h
         Transaction.cpp
         main.cpp
-        Store.cpp
-        Store.h
+        DataManager.cpp
+        DataManager.h
         PdfParser.cpp
         PdfParser.h
 )
