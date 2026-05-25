@@ -2,7 +2,6 @@
 #include <iostream>
 #include "Transaction.h"
 #include "PdfParser.h"
-#include <poppler-document.h>
 #include "DataManager.h"
 #include <windows.h>
 #include <regex>
@@ -16,7 +15,7 @@ void menu() {
     std::cout << "Welcome to my bookkeeping." << std::endl;
     std::cout << "1. Add a transaction" << std::endl;
     std::cout << "2. Show all the transaction" << std::endl;
-    std::cout << "3. Store the data of your bank account" << std::endl;
+    std::cout << "3. Importing data" << std::endl;
     std::cout << "4. Exit with store data" << std::endl;
     std::cout << "5. Exit without store data" << std::endl;
     std::cout << "Type 1-5 to using this program" << std::endl;
@@ -80,8 +79,61 @@ bool callPython() {
     return true;
 }
 
-int main() {
+std::string getTodayDate() {
+    auto now = std::chrono::system_clock::now();
+    auto local_zone = std::chrono::current_zone();
+    auto local_time = local_zone->to_local(now);
+    return std::format("{:%Y%m%d}", local_time);
+}
 
+bool validInput(const std::string& prompt, const std::string& input) {
+    if (prompt[0] == 'D') {
+        if (input.size() != 8) return false;
+        if (!std::ranges::all_of(input, isdigit)) return false;
+
+        int year = std::stoi(input.substr(0,4));
+        int month = std::stoi(input.substr(4,2));
+        int date = std::stoi(input.substr(6,2));
+
+        if (year < 2000 || year > 2050) return false;
+        if (month < 1 || month > 12) return false;
+        int dateInYear[] = {0,31,28,31,30,31,30,31,31,30,31,30,31};
+        if (year%4 == 0 && year % 100 != 0 || year % 400 == 0) dateInYear[2] = 29;
+        if (date < 1 || date > dateInYear[month]) return false;
+        return true;
+    }
+    if (prompt[0] == 'T') {
+        if (input.size() != 5) return false;
+        std::string temp = input.substr(0,2)+input.substr(3,2);
+        if (!std::ranges::all_of(temp, isdigit)) return false;
+        const int hour = std::stoi(input.substr(0,2));
+        const int minute = std::stoi(input.substr(3,2));
+        if (hour > 24 || hour < 0) return false;
+        if (minute > 60 || minute < 0) return false;
+        return true;
+    }
+    if (prompt[0] == 'A') {
+        if (!std::ranges::all_of(input, isdigit)) return false;
+        return true;
+    }
+    return true;
+}
+
+std::string defaultInput(const std::string& prompt, const std::string& defaultValue) {
+    std::string input;
+    std::cout << prompt << " Press 'Enter' to use default value: " << defaultValue << std::endl;
+    if (std::getline(std::cin, input) && !input.empty() ) { //std::ws could ignore the space and \n
+        if (validInput(prompt, input)) {
+            return input;
+        }
+        std::cout << "This is not the valid input, please check the input format. (We would use the default value)" << std::endl;
+        return defaultValue;
+    }
+    return defaultValue;
+}
+
+int main() {
+    SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
 
     const PdfParser::Config config = PdfParser::loadConfig();
@@ -93,7 +145,6 @@ int main() {
     int choice = 0;
     while (choice != 4 && choice != 5) {
         menu();
-
         if (!(std::cin >> choice)) {
             std::cerr << "Invalid choice" << std::endl;
             std::cin.clear();
@@ -102,60 +153,178 @@ int main() {
         }
         std::cin.ignore(1000, '\n');
         switch (choice) {
+            case 6: {
+                std::string input;
+                do {
+                    std::string oc, cn;
+                    std::cout << "Do you want to add from the category of file ? [y or n] " << std::endl;
+                    std::cin>>oc;
+                    if (oc == "Y" || oc == "y") {
+                        std::set<std::string> categories;
+                        for (const auto& m : myBookkeeping) {
+                            categories.insert(m->getCategory());
+                        }
+                        int count = 0;
+                        std::cout << "Here are the categories that you could choose to add in category map:" << std::endl;
+                        for (const auto& index : categories) {
+                            std::cout << count << ". " << index << std::endl;
+                            count++;
+                        }
+                        std::string intInput;
+                        std::cout << "Choose a category you want to link:" << std::endl;
+                        std::cin >> intInput;
+                        if (std::ranges::all_of(intInput, isdigit) && 0<=stoi(intInput) && stoi(intInput) < categories.size()) {
+                            int index = std::stoi(intInput);
+                            oc = *std::next(categories.begin(), index);
+                        }
+                        else {
+                            std::cout << "Invalid input" << std::endl;
+                        }
+                    }
+                    else {
+                        std::cout << "What does this category call ?" << std::endl;
+                        std::cin >> oc;
+                    }
+                    std::cout << "What does this category link to ?" << std::endl;
+                    std::cin>>cn;
+                    std::cout << "Old category name: "<< oc << "\nNew category name:  " << cn << std::endl;
+                    std::cout << "Is the data correct? [y or n]" << std::endl;
+                    std::cin>>input;
+                    if (input == "y" || input == "Y") {
+                        DataManager::addCategory(oc, cn);
+                        for (const auto& m : myBookkeeping) {
+                            DataManager::categoryMapping(m);
+                        }
+                    }
+                    else if (input == "N" || input == "n") {
+                        std::cout << "Discard the data" << std::endl;
+                    }
+                    std::cout << "Do you want to add more category ? [q to quit / other keys continue]" << std::endl;
+                    std::cin>>input;
+                }while (input != "q" && input != "Q");
+                break;
+            }
             case 1: {
-                // std::string d,c,n,t;
-                // double a;
-                // std::cout << "Date (YYYY-MM-DD): "; std::cin >> d;
-                // std::cout << "Time (HH:mm): "; std::cin >> t;
-                // std::cout << "Category: "; std::cin >> c;
-                // std::cout << "Amount: "; std::cin >> a;
-                // std::cout << "Note: "; std::cin >> n;
-                // myBookkeeping.emplace_back(d,t,c,a,n);
-                // std::cout << "Complete"<< std::endl;
+                std::string d,c,n,t,aStr;
+                double a = 0;
+                char confirm = 'n';
+                do {
+                    std::string today = getTodayDate();
+                    d=defaultInput("Date[YYYYMMDD]: ", today);
+                    t=defaultInput("Time[HH:MM]: ", "No Time");
+                    c=defaultInput("Category: ", "No Category");
+                    aStr=defaultInput("Amount: ", "0");
+                    a = std::stod(aStr);
+                    std::cout << "Note: "; std::getline(std::cin>> std::ws, n);
 
-                if(callPython()){
-                    std::string path = PdfParser::getCSVfile("downloads");
-                    std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
-                    receipt::checkUnique(receipt_all, config.csv_filename);
-                    for (const auto& r : receipt_all) {
-                        myBookkeeping.push_back(std::make_shared<receipt>(r));
+                    std::cout << "\nPlease confirm the data you've input in " << std::endl;
+                    std::cout << "Date: " << d
+                              << "\nTime: " << t
+                              << "\nCategory: " << c
+                              << "\nAmount: " << a
+                              << "\nNote: " << n << std::endl;
+                    std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data ]" << std::endl;
+                    std::cin>>confirm;
+                    confirm = tolower(confirm);
+                    if (confirm == 'd') {
+                        std::cout << "Data was discarded " << std::endl;
+                        break;
                     }
-                    std::cout << "Alright, here's result" << std::endl;
-                    double totalAmount = 0;
-                    for (const auto& item : receipt_all) {
-                        totalAmount += item.getAmount();
-                        item.display();
-                    }
-                    std::cout << "Total amount: " << totalAmount << std::endl;
+                    std::cin.ignore(10000, '\n');
+                }while (confirm != 'y');
+                if (confirm == 'y') {
+                    myBookkeeping.push_back(make_shared<Transaction>("Other", d, t, c, a, n));
+                    std::cout << "Successfully add into data" << std::endl;
                 }
-
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::system("cls");
                 break;
                 }
 
             case 2: {
                 double total = 0;
                 std::cout << "\nType    Date    Time    Category      Cost     | Note\n";
+                int count = 0;
                 for (const auto& record : myBookkeeping) {
+                    std::cout << count << ". ";
                     record->display();
                     total +=  record->getAmount();
+                    count ++;
                 }
                 std::cout << "\nYou've spent " << total << std::endl;
+                std::cout << "Type 'e' into delete mode or any other keys to quit" << std::endl;
+                std::string input;
+                std::cin>> input;
+                while (input == "e" || input == "E") {
+                    std::cout << "Choose one or multiple things to delete [e.g. 1 2 31 231]" ;
+                    std::string delIndex, temp;
+                    std::getline(std::cin>> std::ws, delIndex);
+                    std::stringstream ss(delIndex);
+                    std::unordered_set<int> check;
+                    while (ss >> temp) {
+                        if (std::ranges::all_of(temp, isdigit)) {
+                            if (check.insert(std::stoi(temp)).second) {
+                                if (0 <= stoi(temp) && stoi(temp) < myBookkeeping.size()) {
+                                    myBookkeeping[stoi(temp)]->editType("Deleted");
+                                }
+                                else {
+                                    std::cout << temp << " is not a valid index" << std::endl;
+                                }
+                            }
+                        }
+                        else {
+                            std::cout << "This is not a valid index" << std::endl;
+                        }
+                    }
+                    std::cout << "Do you want to delete more data or quit [e to continue /q to quit]" << std::endl;
+                    std::cin >> input; std::cin.ignore(1000, '\n');
+                }
                 break;
             }
 
             case 3: {
-                std::string password;
-                std::cout << "Enter password: "; std::cin >> password;
-                std::vector <Transaction> imported = PdfParser::parseBankStatement(config.deposit, password);
-                std::cout << "Correct password! Now importing from "<< config.deposit << std::endl;
-                if (imported.empty()) {
-                    std::cerr << "Import failed" << std::endl;
-                }
-                else {
-                    for (const auto& item : imported) {
-                        myBookkeeping.push_back(std::make_shared<Transaction>(item));
+                std::cout << "Choose one source to download the data" << std::endl;
+                std::cout << "1.Bank    2.Receipt" << std::endl;
+                int input;
+                std::cin >> input;
+                switch (input) {
+                    case 1: {
+                        std::string password;
+                        std::cout << "Enter password: "; std::cin >> password;
+                        std::vector <Transaction> imported = PdfParser::parseBankStatement(config.deposit, password);
+                        std::cout << "Correct password! Now importing from "<< config.deposit << std::endl;
+                        if (imported.empty()) {
+                            std::cerr << "Import failed" << std::endl;
+                        }
+                        else {
+                            for (const auto& item : imported) {
+                                myBookkeeping.push_back(std::make_shared<Transaction>(item));
+                            }
+                            std::cout << "Success" << std::endl;
+                        }
+                        break;
                     }
-                    std::cout << "Success" << std::endl;
+                    case 2: {
+                        if(callPython()){
+                            std::string path = PdfParser::getCSVfile("downloads");
+                            std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
+                            receipt::checkUnique(receipt_all, config.csv_filename);
+                            for (const auto& r : receipt_all) {
+                                myBookkeeping.push_back(std::make_shared<receipt>(r));
+                            }
+                            std::cout << "Alright, here's result" << std::endl;
+                            double totalAmount = 0;
+                            for (const auto& item : receipt_all) {
+                                totalAmount += item.getAmount();
+                                item.display();
+                            }
+                            std::cout << "Total amount: " << totalAmount << std::endl;
+                        }
+                        break;
+                    }
+                    default: {
+                        std::cout << "Not a valid choice" << std::endl;
+                    }
                 }
                 break;
             }

@@ -22,6 +22,8 @@ public:
     [[nodiscard]] std::string getCategory() const {return category;}
     [[nodiscard]] std::string getNote() const {return note;}
     [[nodiscard]] std::string getDate() const {return date;}
+    void editType(const std::string& type);
+    void editCategory(const std::string& category);
 
     static void saveToFile(const std::vector<Transaction> &records, const std::string &filename);
     virtual ~Transaction() = default;

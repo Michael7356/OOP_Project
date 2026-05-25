@@ -18,7 +18,14 @@ receipt::receipt(std::string type,std::string date, std::string time, std::strin
     : Transaction(std::move(type),std::move(date), std::move(time), std::move(category), a, std::move(note)), receiptNumber(std::move(receiptNumber)) {}
 
 void Transaction::display() const {
-    std::cout << std::left <<std::setw(12) << date << std::setw(10) << time << std::setw(8) << category << std::setw(6) << amount << " | " << note << std::endl;
+    std::cout << std::left <<std::setw(12) << type <<std::setw(12) << date << std::setw(10) << time << std::setw(8) << category << std::setw(6) << amount << " | " << note << std::endl;
+}
+
+void Transaction::editType(const std::string& type) {
+    this ->type = type;
+}
+void Transaction::editCategory(const std::string& category) {
+    this->category = category;
 }
 
 void Transaction::saveToFile(const std::vector<Transaction>& records, const std::string& filename) {

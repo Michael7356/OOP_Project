@@ -3,6 +3,13 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <ranges>
+
+std::map<std::string, std::string> DataManager::data;
+
+std::map<std::string, std::string> DataManager::getCategories() {
+    return data;
+}
 
 std::vector<std::shared_ptr<Transaction> > DataManager::loadFromFile(const std::string &fileName) {
     std::vector<std::shared_ptr<Transaction> > result;
@@ -24,7 +31,7 @@ std::vector<std::shared_ptr<Transaction> > DataManager::loadFromFile(const std::
         std::getline(ss, amountStr, ',');
         std::getline(ss, note, ',');
         double amount = amountStr.empty()? 0.0 : std::stod(amountStr);
-        if (type == "Bank") {
+        if (type == "Bank" || type == "Other") {
             result.push_back(std::make_shared<Transaction>(type, date, time, category, amount, note));
         }
         else if (type == "Receipt") {
@@ -38,9 +45,6 @@ std::vector<std::shared_ptr<Transaction> > DataManager::loadFromFile(const std::
 }
 
 void DataManager::saveToFile(const std::vector<std::shared_ptr<Transaction>>& records, const std::string &fileName) {
-    std::ifstream inFile(fileName);
-    bool isNew = !inFile.is_open() || inFile.peek() == std::ifstream::traits_type::eof();
-    inFile.close();
 
     std::ofstream outFile(fileName, std::ios::out|std::ios::trunc);
     if (!outFile.is_open()) {
@@ -48,11 +52,12 @@ void DataManager::saveToFile(const std::vector<std::shared_ptr<Transaction>>& re
         return;
     }
     outFile << "\xEF\xBB\xBF";
-    if (isNew) {
-        outFile << "Date,Time,Category,Amount,Note, ReceiptNumber\n";
-    }
+    outFile << "Type,Date,Time,Category,Amount,Note, ReceiptNumber\n";
     for (const auto& tptr : records) {
         if (!tptr) continue;
+        if (tptr->getType() == "Deleted") {
+            continue;
+        }
         auto rptr = dynamic_cast<const receipt*>(tptr.get());
         if (rptr) {
             outFile << rptr->getType() << ","
@@ -93,4 +98,34 @@ bool DataManager::compare(const std::shared_ptr<Transaction>& a, const std::shar
     if (a->getTime() != b->getTime())  return a->getTime() > b->getTime();
 
     return a->getNote() > b->getNote();
+}
+
+void DataManager::categoryMapping(const std::shared_ptr<Transaction> &transaction) {
+    if (!transaction) {return;}
+
+    auto it = data.find(transaction->getCategory());
+    if (it != data.end()) {
+        transaction->editCategory(it->second);
+        return;
+    }
+    for (const auto& [fst, snd] : data) {
+        if (transaction->getCategory().find(fst) != std::string::npos) {
+            transaction->editCategory(snd);
+            return;
+        }
+    }
+}
+
+void DataManager::addCategory(const std::string& OriginCategory, const std::string& CategoryName) {
+    if (!data.contains(OriginCategory)) {
+        data[OriginCategory] = CategoryName;
+        std::cout << "Successfully add a category" << std::endl;
+    }
+    else {
+        std::cout << "This category is already exist in category map" << std::endl;
+    }
+}
+
+void DataManager::removeCategory(const std::string& category) {
+    data.erase(category);
 }

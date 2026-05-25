@@ -16,8 +16,6 @@ private:
 public:
     static std::vector<Transaction> parseBankStatement(const std::string& filepath, const std::string& password);
 
-    static void addCategoryMapping(const std::string& keyword, const std::string& categoryName);
-
     static std::optional<Transaction> resolvingRegex_Mail(std::string smsText);
 
     struct Config {
@@ -29,13 +27,13 @@ public:
 
     static Config loadConfig();
 
-    static std::string getCSVfile(const std::string& dirPath);
+    static std::string getCSVfile(const std::string& dirPath); // Find out the path of the file just download
 
 };
 
 class csvParser : public PdfParser {
 public:
-    static std::vector<receipt> loadFromFile (const std::string &filename) ;
+    static std::vector<receipt> loadFromFile (const std::string &filename) ; // Use for capture the receipt data
 };
 
 
