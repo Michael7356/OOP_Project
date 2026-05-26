@@ -18,7 +18,7 @@ receipt::receipt(std::string type,std::string date, std::string time, std::strin
     : Transaction(std::move(type),std::move(date), std::move(time), std::move(category), a, std::move(note)), receiptNumber(std::move(receiptNumber)) {}
 
 void Transaction::display() const {
-    std::cout << std::left <<std::setw(12) << type <<std::setw(12) << date << std::setw(10) << time << std::setw(8) << category << std::setw(6) << amount << " | " << note << std::endl;
+    std::cout << std::left <<std::setw(12) << type <<std::setw(12) << date << std::setw(10) << time << std::setw(20) << category << std::right << std::setw(6) << amount << std::setw(6) <<" | " << note << std::endl;
 }
 
 void Transaction::editType(const std::string& type) {
@@ -26,6 +26,12 @@ void Transaction::editType(const std::string& type) {
 }
 void Transaction::editCategory(const std::string& category) {
     this->category = category;
+}
+void Transaction::editNote(const std::string& note) {
+    this->note = note;
+}
+void Transaction::editAmount(double amount) {
+    this->amount = amount;
 }
 
 void Transaction::saveToFile(const std::vector<Transaction>& records, const std::string& filename) {
@@ -80,4 +86,33 @@ void receipt::checkUnique( std::vector<receipt>& records,const std::string& file
     }
     inFile.close();
     records.swap(tempRecords);
+}
+
+std::vector<receipt> receipt::getSimpleRecords(const std::vector<std::shared_ptr<Transaction> > &records) {
+    std::unordered_map<std::string, size_t> receiptID; //size_t use to tell index of array
+    std::vector<receipt> tempRecords;
+
+    for (const auto& record : records) {
+        if (!record) continue;
+
+        auto rptr = dynamic_cast<const receipt*>(record.get());
+        if (!rptr || rptr->getType() == "Deleted") continue;
+
+        std::string receiptNumber = rptr->getReceiptNumber();
+        if (!receiptID.contains(receiptNumber)) {
+            auto dataptr = std::dynamic_pointer_cast<receipt>(record);
+            if (dataptr) {
+                tempRecords.push_back(*dataptr);
+                receiptID[receiptNumber] = tempRecords.size() - 1;
+            }
+        }
+        else {
+            size_t index = receiptID[receiptNumber];
+            double currAmount = tempRecords[index].getAmount();
+            std::string currNote = tempRecords[index].getNote();
+            tempRecords[index].editAmount(currAmount + rptr->getAmount());
+            tempRecords[index].editNote(currNote + "    " + rptr->getNote());
+        }
+    }
+    return tempRecords;
 }

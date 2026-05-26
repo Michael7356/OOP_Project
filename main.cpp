@@ -153,6 +153,16 @@ int main() {
         }
         std::cin.ignore(1000, '\n');
         switch (choice) {
+            case 7: {
+                int count = 0;
+                std::vector<receipt> temp = receipt::getSimpleRecords(myBookkeeping);
+                for (const auto& record : temp) {
+                    std::cout << count << ". ";
+                    record.display();
+                    count ++;
+                }
+                break;
+            }
             case 6: {
                 std::string input;
                 do {
@@ -185,7 +195,7 @@ int main() {
                         std::cout << "What does this category call ?" << std::endl;
                         std::cin >> oc;
                     }
-                    std::cout << "What does this category link to ?" << std::endl;
+                    std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
                     std::cin>>cn;
                     std::cout << "Old category name: "<< oc << "\nNew category name:  " << cn << std::endl;
                     std::cout << "Is the data correct? [y or n]" << std::endl;
@@ -246,7 +256,7 @@ int main() {
                 std::cout << "\nType    Date    Time    Category      Cost     | Note\n";
                 int count = 0;
                 for (const auto& record : myBookkeeping) {
-                    std::cout << count << ". ";
+                    std::cout <<std::right <<std::setw(3)<< count << ". ";
                     record->display();
                     total +=  record->getAmount();
                     count ++;

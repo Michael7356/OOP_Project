@@ -1,6 +1,7 @@
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
 
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -24,6 +25,8 @@ public:
     [[nodiscard]] std::string getDate() const {return date;}
     void editType(const std::string& type);
     void editCategory(const std::string& category);
+    void editNote(const std::string& note);
+    void editAmount(double amount);
 
     static void saveToFile(const std::vector<Transaction> &records, const std::string &filename);
     virtual ~Transaction() = default;
@@ -33,11 +36,14 @@ class receipt : public Transaction {
 private:
     std::string receiptNumber;
 public:
+    ~receipt() override = default;
+
     receipt(std::string type, std::string date, std::string time, std::string category, double amount, std::string note, std::string receiptNumber);
     [[nodiscard]] std::string getReceiptNumber() const {return receiptNumber;};
 
     static void checkUnique(std::vector<receipt>& records, const std::string& filename);
 
+    static std::vector<receipt> getSimpleRecords(const std::vector<std::shared_ptr<Transaction>>& records);
 };
 
 #endif
