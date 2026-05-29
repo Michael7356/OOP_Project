@@ -15,20 +15,19 @@ namespace fs = std::filesystem;
 
 struct Config {
     std::string script_ID;
-    int port;
     std::string csv_filename;
     std::string deposit;
+    std::string cate_path;
 };
 
 PdfParser::Config PdfParser::loadConfig() {
-    std::ifstream inFile("config.json");
+    std::ifstream inFile("Storage/config.json");
     if (!inFile) {
         std::cerr << "Error at loadConfig" <<std::endl;
-        return {"DEFAULT_ID", 8080};
     }
     json j;
     inFile >> j;
-    return {j["google_script_id"], j["port"], j["csv_path"], j["deposit"]};
+    return {j["google_script_id"], j["csv_path"], j["deposit"],};
 };
 
 std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepath, const std::string& password) {

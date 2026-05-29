@@ -3,15 +3,61 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
-#include <ranges>
+#include <filesystem>
+#include "json.hpp"
 
+using json = nlohmann::json;
 std::map<std::string, std::string> DataManager::data;
 
-std::map<std::string, std::string> DataManager::getCategories() {
-    return data;
+void DataManager::checkInitFile(const std::string &filename) {
+    std::filesystem::path filePath(filename); //Won't pops out error if the file doesn't exist in anywhere.
+
+    if (filePath.has_parent_path()) {
+        std::filesystem::path parentDir = filePath.parent_path();
+        if (!std::filesystem::exists(parentDir)) {
+            try {
+                std::filesystem::create_directory(parentDir);
+                std::cout << "Folder: " <<parentDir << " is not exist, we have create the folder" << std::endl;
+            }catch (const std::exception& e) {
+                std::cerr << "Error happened at creating parent folder [Error code:" << e.what() << "]" << std::endl;
+            }
+        }
+    }
+    if (!std::filesystem::exists(filename)) {
+        std::ofstream newFile (filename, std::ios::out);
+        std::cout << "File: " << filename << " is not exist, we have create the file" << std::endl;
+        if (newFile.is_open()) {
+            if (filename == "Storage/Transaction.csv") {
+                newFile << "\xEF\xBB\xBF";
+                newFile << "Type, Date, Time, Category, Amount, Note, ReceiptNumber\n";
+            }
+            else if (filename == "Storage/config.json") {
+                std::string input;
+                std::map<std::string, std::string> initConfig = {{"csv_path", "Storage/Transaction.csv"}, {"Account", ""}, {"Password", ""}};
+                std::cout << "Looks like you're first time using this program, you have to type these necessary data" << std::endl;
+                std::cout << "Your account [財政部電子發票平台帳號]: ";
+                std::cin >> input; initConfig["Account"] = input;
+                std::cout << "Your password [財政部電子發票平台密碼]: ";
+                std::cin >> input; initConfig["Password"] = input;
+                std::cout << "Your google script url [Read Readme.md if you don't know what it is]: ";
+                std::cin >> input; initConfig["google_script_id"] = input;
+                json j = initConfig;
+                newFile << j.dump(4);
+                std::cout << "Create .json file successfully" << std::endl;
+            }
+            else if (filename == "Storage/cate.json") {
+                json defaultJson = json::object();
+                newFile << defaultJson.dump(4);
+            }
+            newFile.close();
+        }
+        else {
+            std::cerr << "Error happened at creating file" << std::endl;
+        }
+    }
 }
 
-std::vector<std::shared_ptr<Transaction> > DataManager::loadFromFile(const std::string &fileName) {
+std::vector<std::shared_ptr<Transaction>> DataManager::loadFromFile(const std::string &fileName) {
     std::vector<std::shared_ptr<Transaction> > result;
     std::ifstream inFile(fileName);
 
@@ -98,6 +144,46 @@ bool DataManager::compare(const std::shared_ptr<Transaction>& a, const std::shar
     if (a->getTime() != b->getTime())  return a->getTime() > b->getTime();
 
     return a->getNote() > b->getNote();
+}
+
+void DataManager::loadCategory(const std::string& filepath) {
+    //Only accept .json file
+    if (!std::filesystem::exists(filepath)) {
+        checkInitFile("Storage/cate.json");
+    }
+    std::ifstream inFile(filepath);
+    if (inFile.is_open()) {
+        json j;
+        try {
+            inFile >> j;
+            inFile.close();
+            if (j.is_object() && !j.is_null()) {
+                data = j.get<std::map<std::string, std::string>>();
+                std::cout << "Load categories successfully" << std::endl;
+            }
+            else {
+                data.clear();
+                std::cout << "Failed to load categories, please check the .json file" << std::endl;
+            }
+        }catch (json::exception& e) {
+            std::cerr << "Failed to load categories from .json file [Error code: " << e.what() << "]" << std::endl;
+            data.clear();
+        }
+    }
+}
+
+void DataManager::saveCategory(const std::string& filepath) {
+    std::ofstream outFile(filepath, std::ios::out|std::ios::trunc);
+    if (outFile.is_open()) {
+        json j = data;
+        outFile << j.dump(4);
+        outFile.close();
+        std::cout << "Save categories successfully" << std::endl;
+    }
+}
+
+std::map<std::string, std::string> DataManager::getCategories() {
+    return data;
 }
 
 void DataManager::categoryMapping(const std::shared_ptr<Transaction> &transaction) {

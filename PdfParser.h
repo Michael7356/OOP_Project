@@ -20,7 +20,6 @@ public:
 
     struct Config {
         std::string script_ID;
-        int port;
         std::string csv_filename;
         std::string deposit;
     };

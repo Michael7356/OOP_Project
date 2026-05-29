@@ -13,13 +13,19 @@ class DataManager {
 private:
     static std::map<std::string, std::string> data;
 public:
-    static std::map<std::string, std::string> getCategories();
+    static void checkInitFile(const std::string& filename);
 
     static std::vector<std::shared_ptr<Transaction>> loadFromFile(const std::string& fileName);
 
     static void saveToFile(const std::vector<std::shared_ptr<Transaction>>& records, const std::string& fileName);
 
     static bool compare(const std::shared_ptr<Transaction> &a, const std::shared_ptr<Transaction> &b);
+
+    static void loadCategory(const std::string& filepath);
+
+    static void saveCategory(const std::string& filepath);
+
+    static std::map<std::string, std::string> getCategories();
 
     static void categoryMapping (const std::shared_ptr<Transaction>&transaction);
 

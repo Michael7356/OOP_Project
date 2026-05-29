@@ -1,4 +1,6 @@
 #include "Transaction.h"
+
+#include <conio.h>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -60,7 +62,6 @@ void Transaction::saveToFile(const std::vector<Transaction>& records, const std:
     }
 }
 
-
 void receipt::checkUnique( std::vector<receipt>& records,const std::string& filename) {
     std::unordered_set<std::string>receiptID;
     std::vector<receipt> tempRecords;
@@ -88,9 +89,9 @@ void receipt::checkUnique( std::vector<receipt>& records,const std::string& file
     records.swap(tempRecords);
 }
 
-std::vector<receipt> receipt::getSimpleRecords(const std::vector<std::shared_ptr<Transaction> > &records) {
+std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::vector<std::shared_ptr<Transaction> > &records) {
     std::unordered_map<std::string, size_t> receiptID; //size_t use to tell index of array
-    std::vector<receipt> tempRecords;
+    std::vector<std::shared_ptr<Transaction>> tempRecords;
 
     for (const auto& record : records) {
         if (!record) continue;
@@ -102,17 +103,26 @@ std::vector<receipt> receipt::getSimpleRecords(const std::vector<std::shared_ptr
         if (!receiptID.contains(receiptNumber)) {
             auto dataptr = std::dynamic_pointer_cast<receipt>(record);
             if (dataptr) {
-                tempRecords.push_back(*dataptr);
+                dataptr->editType("Receipt(comp)");
+                tempRecords.push_back(std::make_shared<receipt>(*dataptr));
                 receiptID[receiptNumber] = tempRecords.size() - 1;
             }
         }
         else {
             size_t index = receiptID[receiptNumber];
-            double currAmount = tempRecords[index].getAmount();
-            std::string currNote = tempRecords[index].getNote();
-            tempRecords[index].editAmount(currAmount + rptr->getAmount());
-            tempRecords[index].editNote(currNote + "    " + rptr->getNote());
+            double currAmount = tempRecords[index]->getAmount();
+            std::string currNote = tempRecords[index]->getNote();
+            tempRecords[index]->editAmount(currAmount + rptr->getAmount());
+            tempRecords[index]->editNote(currNote + "    " + rptr->getNote());
         }
     }
     return tempRecords;
+}
+
+std::shared_ptr<Transaction> Transaction::clone() const {
+    return std::make_shared<Transaction>(*this);
+}
+
+std::shared_ptr<Transaction> receipt::clone() const {
+    return std::make_shared<receipt>(*this);
 }

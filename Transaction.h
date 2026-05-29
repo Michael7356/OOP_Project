@@ -29,6 +29,9 @@ public:
     void editAmount(double amount);
 
     static void saveToFile(const std::vector<Transaction> &records, const std::string &filename);
+
+    virtual std::shared_ptr<Transaction> clone() const;
+
     virtual ~Transaction() = default;
 };
 
@@ -43,7 +46,9 @@ public:
 
     static void checkUnique(std::vector<receipt>& records, const std::string& filename);
 
-    static std::vector<receipt> getSimpleRecords(const std::vector<std::shared_ptr<Transaction>>& records);
+    std::shared_ptr<Transaction> clone() const override;
+
+    static std::vector<std::shared_ptr<Transaction>> getSimpleRecords(const std::vector<std::shared_ptr<Transaction>>& records);
 };
 
 #endif
