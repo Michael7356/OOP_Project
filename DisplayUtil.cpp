@@ -13,6 +13,8 @@
 #include <thread>
 #include <conio.h>
 
+#include "httplib.h"
+
 void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>& records) {
     int RecordSize = records.size(), page = 1, maxPage = (RecordSize + 10 - 1) / 10;
     double totalAmount = 0;
@@ -24,7 +26,7 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
         else {
             if (chInput != 's') std::cout << "Invalid input [Reach the max or min page]" << std::endl;
         }
-        std::cout << std::left << std::setw(12) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(20) <<"category" << std::right << std::setw(6) <<"amount" << std::setw(6) <<" | note" << std::endl;
+        std::cout << std::left << std::setw(16) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(22) <<"category" << std::right << std::setw(8) <<"amount | note" << std::endl;
         int index = (page - 1) * 10;
         for (int i = index ; i <std::ranges::min(page*10, RecordSize)  ; i ++) {
             if (records[i]) {
@@ -92,4 +94,46 @@ void DisplayUtil::deleteMulti(const std::vector<std::string> &list, const std::v
             }
         }
     }
+}
+
+int DisplayUtil::getVisualWidth(const std::string str) {
+    int width = 0;
+    for (size_t i = 0 ; i < str.length();) {
+        unsigned char ch = str[i];
+        if (ch <= 127) { //ASCII code 0~127
+            width += 1;
+            i ++;
+        }
+        else if ((ch & 0xE0) == 0xE0) {
+            width += 2; // Full size character
+            i += 2;
+        }
+        else if ((ch & 0xF0) == 0xF0) {
+            width += 2; // Chinese width
+            i += 3;
+        }
+        else if ((ch & 0xF8) == 0xF8) {
+            width += 2;
+            i += 4;
+        }
+        else {
+            i ++;
+        }
+    }
+    return width;
+}
+
+std::string DisplayUtil::formatOutput(const std::string str, const int length, bool leftAlign) { //Another version of setw() but fit Chinese words
+    int currentLength = getVisualWidth(str);
+    int spaceNeeded = length - currentLength;
+    if (spaceNeeded <= 0) return str;
+
+    std::string spaces(spaceNeeded, ' ');
+    if (leftAlign) {
+        return str + spaces;
+    }
+    else {
+        return spaces + str;
+    }
+
 }

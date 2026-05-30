@@ -10,6 +10,7 @@
 #include <fstream>
 #include <conio.h>
 
+#include "Deposit.h"
 #include "DisplayUtil.h"
 
 using json = nlohmann::json;
@@ -150,7 +151,7 @@ int main() {
     syncWithGoogle();
 
     std::vector<std::shared_ptr<Transaction>> myBookkeeping = DataManager::loadFromFile(config.csv_filename);
-
+    bool yes = true;
     int choice = 0;
     while (choice != 6 && choice != 7) {
         menu();
@@ -160,8 +161,34 @@ int main() {
             std::cin.ignore(10000, '\n');
             continue;
         }
+
         std::cin.ignore(1000, '\n');
         switch (choice) {
+            case 9: {
+                std::system("cls");
+                std::map<std::string, std::string> categories = DataManager::getCategories();
+                for (const auto& [fst, snd] : categories) {
+                    std:: cout << fst << " is linked to " << snd << std::endl;
+                }
+                char chInput;
+                std::cout << "Press any key to quit" << std::endl;
+                chInput = getch();
+                break;
+            }
+
+            case 8: {
+                std::vector<std::shared_ptr<Transaction>> temp;
+                if (yes) {
+                    std::shared_ptr<Deposit> deposit = Deposit::deposit_ptr();
+                     temp = deposit -> get_Record();
+                }
+                DisplayUtil::displayInList(temp);
+                for (const auto& a : temp) {
+                    myBookkeeping.push_back(a);
+                }
+                yes = false;
+                break;
+            }
 
             case 1: {
                 std::string d,c,n,t,aStr;

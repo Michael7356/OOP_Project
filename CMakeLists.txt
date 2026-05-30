@@ -12,6 +12,8 @@ add_executable(OOP_Project Transaction.h
         PdfParser.h
         DisplayUtil.cpp
         DisplayUtil.h
+        Deposit.cpp
+        Deposit.h
 )
 
 set(MSYS_PATH "C:/msys64/ucrt64")

@@ -34,8 +34,7 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
     std::vector<Transaction> result;
     const poppler::document *doc = poppler::document::load_from_file(filepath, password);
     if (!doc) {
-        std::cerr << "Failed to load document: " << filepath << std::endl;
-        return result;
+        throw std::runtime_error("Error at loadBankStatement");
     }
 
     for (int i = 0 ; i < doc->pages(); ++i) {
@@ -57,22 +56,13 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
     return result;
 }
 
-std::map <std::string, std::string> PdfParser::categoryMap = {
-    {"國外交易手續費","Handling fee"},
-    {"ＧＯＯＧＬＥ","Google"},
-    {"全家","全家"},
-    {"全聯","全聯"},
-    {"美聯社","美聯社"},
-    {"ＡＰＰＬＥ", "Apple"},
-    {"ＳＴＥＡＭ", "Steam"}
-};
-
 bool PdfParser::processLine(const std::string& line, Transaction& outTransaction) {
     const std::regex pattern(R"((\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\s{3}([^\s-]+)?.*?(\d{1,3}(?:,\d{3})?).*?(\d{1,3}(?:,\d{3})?)\s{3}([^\s-]+)?\s+([^\s-]+|-)?\s+([^\s-]+)?)");
     std::smatch match;
     if (std::regex_search(line, match, pattern)) {
         std::string dateAndTime = match[1];
         std::string date = match[1].str().substr(0,10);
+        date = date.substr(0,4) + date.substr(5,2)+date.substr(8, 2);
         std::string time = match[1].str().substr(11,5);
         std::string summary = match[2];
         std::string amount_str = match[3];
@@ -80,6 +70,7 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
         std::string note = match[5];
         std::string other_acc = match[6];
         std::string description = match[7];
+        if (description.find("連加＊") != std::string::npos) description = description.substr(9);
 
 
 
@@ -99,8 +90,8 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
                 amount = -amount;
             }
 
-            std::string category = (description.find("ＧＯＯＧＬＥ") != std::string::npos) ? "Subscription" : "General";
-            outTransaction = Transaction("Bank", date, time, category, amount, description);
+
+            outTransaction = Transaction("CTBC", date, time, description, amount, "");
             return true;
         }
         catch (...) {
@@ -116,7 +107,8 @@ std::optional<Transaction> PdfParser::resolvingRegex_Mail(std::string smsText) {
     Config config = loadConfig();
     if (std::regex_search(smsText, match, pattern)) {
         std::string date = match[1];
-        std::string time = match[2];
+        std::string time = match[2] ;
+        time = time.substr(0,2) + time.substr(2, 2);
         std::string amountStr = match[3];
         std::erase(amountStr, ',');
         double amount = std::stod(amountStr);
@@ -183,3 +175,46 @@ std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
     return tempRecords;
 }
 
+std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::string& filename) {
+    std::vector<std::shared_ptr<Transaction>> tempRecords;
+    std::ifstream inFile(filename);
+    if (!inFile.is_open()) {
+        throw std::runtime_error("Error opening file " + filename);
+    }
+    std::string line;
+    bool cont = true;
+    std::getline(inFile, line);
+    std::getline(inFile, line); //First two line is useless
+    while (std::getline(inFile,line)) {
+        std::vector<std::string> tokens;
+        std::stringstream ss(line);
+        std::string input;
+        for (int i = 0 ; i < 8 ; i ++) {
+            std::getline(ss, input, ',');
+            if (input.find("※本公司每日凌晨0時") != std::string::npos) {
+                cont = false;
+                break;
+            }
+            tokens.push_back(input);
+        }
+        if (!cont) break;
+        std::string year = tokens[0].substr(0,3);
+        int nowYear = std::stoi(year) + 1911;
+        std::string date = std::to_string(nowYear) + tokens[0].substr(4,2) + tokens[0].substr(7,2);
+        std::string withdrawAmountStr = tokens[3];
+        std::string depositAmountStr = tokens[4];
+        if (!withdrawAmountStr.empty()) {
+            std::erase(withdrawAmountStr, ',');
+            std::cout << withdrawAmountStr << std::endl;
+            double withdrawAmount = std::stod(withdrawAmountStr) * -1;
+            tempRecords.push_back(std::make_shared<Transaction>("PS", date, "No Time", "No Category",withdrawAmount, ""));
+        }
+        else if (!depositAmountStr.empty()) {
+            std::erase(depositAmountStr, ',');
+            std::cout << depositAmountStr << std::endl;
+            double depositAmount = std::stod(depositAmountStr);
+            tempRecords.push_back(std::make_shared<Transaction> ("PS", date, "No Time", "No Category",depositAmount, ""));
+        }
+    }
+    return tempRecords;
+}

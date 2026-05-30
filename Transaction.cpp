@@ -10,6 +10,8 @@
 #include <sstream>
 #include <poppler/cpp/poppler-document.h>
 #include <poppler/cpp/poppler-page.h>
+
+#include "DisplayUtil.h"
 #include "httplib.h"
 #include "json.hpp"
 
@@ -20,7 +22,13 @@ receipt::receipt(std::string type,std::string date, std::string time, std::strin
     : Transaction(std::move(type),std::move(date), std::move(time), std::move(category), a, std::move(note)), receiptNumber(std::move(receiptNumber)) {}
 
 void Transaction::display() const {
-    std::cout << std::left <<std::setw(12) << type <<std::setw(12) << date << std::setw(10) << time << std::setw(20) << category << std::right << std::setw(6) << amount << std::setw(6) <<" | " << note << std::endl;
+    bool leftAlign = true;
+    std::string f_type = DisplayUtil::formatOutput(type, 16, leftAlign);
+    std::string f_date = DisplayUtil::formatOutput(date, 12, leftAlign);
+    std::string f_time = DisplayUtil::formatOutput(time, 10, leftAlign);
+    std::string f_category = DisplayUtil::formatOutput(category, 22, leftAlign);
+    std::cout << f_type << f_date<< f_time << f_category
+              << std::right << std::setw(8) << amount << " | " << note << std::endl;
 }
 
 void Transaction::editType(const std::string& type) {
