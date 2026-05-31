@@ -18,8 +18,11 @@ public:
     void display() const;
 
     virtual std::vector<std::shared_ptr<Transaction>> get_Record() const = 0;
+    virtual std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions)  = 0;
 
     static std::shared_ptr<Deposit> deposit_ptr();
+
+    static bool checkUnique(const std::shared_ptr<Transaction> &record, const std::vector<std::shared_ptr<Transaction>> &transactions);
 
     static std::string getFilePathWithWindow(const std::string &fileType);
     virtual ~Deposit() = default;
@@ -33,21 +36,24 @@ public:
 
     void set_password(const std::string& password);
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
-
+    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
 };
 
-class PS : public Deposit{
+class POST : public Deposit{
 private:
     std::string password;
 public:
-    PS(std::string password): password(std::move(password)){}
+    POST(std::string password): password(std::move(password)){}
 
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
+    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
+    static void mergeOriginal(std::vector<std::shared_ptr<Transaction>>& a, std::vector<std::shared_ptr<Transaction>>& b);
 };
 
 class IPass : public Deposit{
 public:
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
+    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
 };
 
 

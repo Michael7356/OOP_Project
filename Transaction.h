@@ -24,11 +24,16 @@ public:
     [[nodiscard]] std::string getNote() const {return note;}
     [[nodiscard]] std::string getDate() const {return date;}
     void editType(const std::string& type);
+    void editDateAndTime(const std::string& date, const std::string& time);
     void editCategory(const std::string& category);
     void editNote(const std::string& note);
     void editAmount(double amount);
 
     static void saveToFile(const std::vector<Transaction> &records, const std::string &filename);
+
+    static int compareDate(const std::shared_ptr<Transaction>& a, const std::shared_ptr<Transaction>& b);
+
+    bool operator ==(const std::shared_ptr<Transaction>&) const;
 
     virtual std::shared_ptr<Transaction> clone() const;
 

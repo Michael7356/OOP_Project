@@ -34,6 +34,12 @@ void Transaction::display() const {
 void Transaction::editType(const std::string& type) {
     this ->type = type;
 }
+
+void Transaction::editDateAndTime(const std::string &date, const std::string &time) {
+    this->date = date;
+    this->time = time;
+}
+
 void Transaction::editCategory(const std::string& category) {
     this->category = category;
 }
@@ -41,7 +47,7 @@ void Transaction::editNote(const std::string& note) {
     this->note = note;
 }
 void Transaction::editAmount(double amount) {
-    this->amount = amount;
+    this->amount = amount > 0 ? amount : 0;
 }
 
 void Transaction::saveToFile(const std::vector<Transaction>& records, const std::string& filename) {
@@ -66,8 +72,33 @@ void Transaction::saveToFile(const std::vector<Transaction>& records, const std:
         std::cout<<"Data saved to "<< filename << " successfully" << std::endl;
     }
     else {
-        std::cerr << "Error" << std::endl;
+        throw std::runtime_error(std::string("Could not open file ") + filename);
     }
+}
+
+int Transaction::compareDate(const std::shared_ptr<Transaction>& a, const std::shared_ptr<Transaction>& b) {
+    int month[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
+    std::string dateA = a->getDate();
+    int yearA =(std::stoi(dateA.substr(0, 4)) - 2000) * 365;
+    int monthA = 0;
+    for (int i = 1 ; i <= std::stoi(dateA.substr(4,2)); i++) {
+        monthA += month[i];
+    }
+    int daysA = std::stoi(dateA.substr(6,2)) + monthA + yearA;
+    std::string dateB = b->getDate();
+    int yearB =(std::stoi(dateA.substr(0, 4)) - 2000) * 365;
+    int monthB = 0;
+    for (int i = 1 ; i <= std::stoi(dateA.substr(4,2)); i++) {
+        monthB += month[i];
+    }
+    int daysB = std::stoi(dateA.substr(6,2)) + monthA + yearA;
+
+    return daysA - daysB;
+}
+
+bool Transaction::operator ==(const std::shared_ptr<Transaction>& other) const {
+    if (this->getDate() == other->getDate() && this->getTime() == other->getTime() && this->getCategory() == other->getCategory() && this->getAmount() == other->getAmount() && this->getNote() == other->getNote()) return true;
+    return false;
 }
 
 void receipt::checkUnique( std::vector<receipt>& records,const std::string& filename) {

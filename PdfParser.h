@@ -16,7 +16,7 @@ private:
 public:
     static std::vector<Transaction> parseBankStatement(const std::string& filepath, const std::string& password);
 
-    static std::optional<Transaction> resolvingRegex_Mail(std::string smsText);
+    static Transaction resolvingRegex_Mail(std::string smsText);
 
     struct Config {
         std::string script_ID;

@@ -101,22 +101,28 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
     return false;
 }
 
-std::optional<Transaction> PdfParser::resolvingRegex_Mail(std::string smsText) {
+Transaction PdfParser::resolvingRegex_Mail(std::string smsText) {
     std::regex pattern (R"(.*?(\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?\d{4}.*?(\d{1,6}).*?)");
     std::smatch match;
     Config config = loadConfig();
     if (std::regex_search(smsText, match, pattern)) {
         std::string date = match[1];
+        date = date.substr(0,2) + date.substr(3,2);
+        std::string year = [] {
+            auto now = std::chrono::system_clock::now();
+            auto local_zone = std::chrono::current_zone();
+            auto local_time = local_zone->to_local(now);
+            return std::format("{:%Y}", local_time);
+        }();
+        date = year + date;
         std::string time = match[2] ;
-        time = time.substr(0,2) + time.substr(2, 2);
         std::string amountStr = match[3];
         std::erase(amountStr, ',');
         double amount = std::stod(amountStr);
-        Transaction t = {"Bank", date, time, "", amount, ""};
+        Transaction t = {"POST[Unconfirmed]", date, time, "No Category", amount, "No note"};
         return t;
     }
-    std::cout << "Can't resolve the format of message" << std::endl;
-    return std::nullopt;
+    throw std::runtime_error("Error at loadBankStatement");
 }
 
 std::string PdfParser::getCSVfile(const std::string& path) {
@@ -185,35 +191,37 @@ std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::
     bool cont = true;
     std::getline(inFile, line);
     std::getline(inFile, line); //First two line is useless
+    int count = 0;
     while (std::getline(inFile,line)) {
-        std::vector<std::string> tokens;
+        count ++;
         std::stringstream ss(line);
         std::string input;
-        for (int i = 0 ; i < 8 ; i ++) {
-            std::getline(ss, input, ',');
-            if (input.find("※本公司每日凌晨0時") != std::string::npos) {
-                cont = false;
-                break;
+        std::string date, time, type,AmountStr,balanceStr;
+        std::regex csv_regex(R"((\d{3}\/\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?,(.*?),.*?,"?,?"?(\d{0,3},?\d{0,3}).*?,.*?,?"(\d{0,3},?\d{0,3}).*?,(.*),)");        if (!cont) break;
+        std::smatch match;
+        if (regex_search(line, match, csv_regex)) {
+            date = match[1];
+            time = match[2];
+            type = match[3];
+            AmountStr = match[4];
+            std::erase(AmountStr, ',');
+            balanceStr = match[5];
+            std::erase(balanceStr, ',');
+        }
+        if (date.empty()) break;
+        std::string year = date.substr(0,3);
+        int nowYear = 0;
+        nowYear = std::stoi(year) + 1911;
+        date = std::to_string(nowYear) + date.substr(4,2) + date.substr(7,2);
+        if (!AmountStr.empty()) {
+            double amount;
+            amount = std::stod(AmountStr);
+            if (type.find("轉入") != std::string::npos || type.find("回饋") != std::string::npos) {
+                tempRecords.push_back(std::make_shared<Transaction>("POST[Uncategorized]", date, time, "No Category",amount, ""));
             }
-            tokens.push_back(input);
-        }
-        if (!cont) break;
-        std::string year = tokens[0].substr(0,3);
-        int nowYear = std::stoi(year) + 1911;
-        std::string date = std::to_string(nowYear) + tokens[0].substr(4,2) + tokens[0].substr(7,2);
-        std::string withdrawAmountStr = tokens[3];
-        std::string depositAmountStr = tokens[4];
-        if (!withdrawAmountStr.empty()) {
-            std::erase(withdrawAmountStr, ',');
-            std::cout << withdrawAmountStr << std::endl;
-            double withdrawAmount = std::stod(withdrawAmountStr) * -1;
-            tempRecords.push_back(std::make_shared<Transaction>("PS", date, "No Time", "No Category",withdrawAmount, ""));
-        }
-        else if (!depositAmountStr.empty()) {
-            std::erase(depositAmountStr, ',');
-            std::cout << depositAmountStr << std::endl;
-            double depositAmount = std::stod(depositAmountStr);
-            tempRecords.push_back(std::make_shared<Transaction> ("PS", date, "No Time", "No Category",depositAmount, ""));
+            else {
+                tempRecords.push_back(std::make_shared<Transaction>("POST[Uncategorized]", date, time, "No Category",amount * -1, ""));
+            }
         }
     }
     return tempRecords;

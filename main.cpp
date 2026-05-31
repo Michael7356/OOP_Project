@@ -46,10 +46,18 @@ void syncWithGoogle() {
             auto data = json::parse(content);
             std::vector<Transaction> temp;
             for (auto& item : data) {
-                Transaction t = PdfParser::resolvingRegex_Mail(item["message"]).value();
-                temp.push_back(t);
+                try {
+                    Transaction t = PdfParser::resolvingRegex_Mail(item["message"]);
+                    temp.push_back(t);
+                }catch (const std::exception& e) {
+                    std::cerr << "Error happened at resolving regex [Error code:"<< e.what() << "]" << std::endl;
+                }
             }
-            Transaction::saveToFile(temp, config.csv_filename);
+            try {
+                Transaction::saveToFile(temp, config.csv_filename);
+            }catch (const std::exception& e) {
+                std::cerr << "Error happened at saveToFile [Error code: "<< e.what() << "]" << std::endl;
+            }
         }
         catch (const json::parse_error& e) {
             std::cerr << "JSON Parse Failed: " << e.what() << std::endl;
@@ -180,12 +188,18 @@ int main() {
                 std::vector<std::shared_ptr<Transaction>> temp;
                 if (yes) {
                     std::shared_ptr<Deposit> deposit = Deposit::deposit_ptr();
-                     temp = deposit -> get_Record();
+                    temp = deposit->get_Record();
+                    if (dynamic_cast<POST*>(deposit.get())) {
+                        POST::mergeOriginal(temp, myBookkeeping);
+                    }
+                    else {
+                        for (const auto& a : temp) {
+                            myBookkeeping.push_back(a);
+                        }
+                    }
                 }
                 DisplayUtil::displayInList(temp);
-                for (const auto& a : temp) {
-                    myBookkeeping.push_back(a);
-                }
+
                 yes = false;
                 break;
             }

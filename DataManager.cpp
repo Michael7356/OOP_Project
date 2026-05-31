@@ -77,13 +77,13 @@ std::vector<std::shared_ptr<Transaction>> DataManager::loadFromFile(const std::s
         std::getline(ss, amountStr, ',');
         std::getline(ss, note, ',');
         double amount = amountStr.empty()? 0.0 : std::stod(amountStr);
-        if (type == "Bank" || type == "Other") {
-            result.push_back(std::make_shared<Transaction>(type, date, time, category, amount, note));
-        }
-        else if (type == "Receipt") {
+        if (type == "Receipt") {
             std::string receiptNumber;
             std::getline(ss, receiptNumber, ',');
             result.push_back(std::make_shared<receipt>(type, date, time, category, amount, note, receiptNumber));
+        }
+        else {
+            result.push_back(std::make_shared<Transaction>(type, date, time, category, amount, note));
         }
     }
     inFile.close();
