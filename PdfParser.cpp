@@ -30,8 +30,8 @@ PdfParser::Config PdfParser::loadConfig() {
     return {j["google_script_id"], j["csv_path"], j["deposit"],};
 };
 
-std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepath, const std::string& password) {
-    std::vector<Transaction> result;
+std::vector<std::shared_ptr<Transaction>> PdfParser::parseBankStatement(const std::string& filepath, const std::string& password,const std::string& type) {
+    std::vector<std::shared_ptr<Transaction>> result;
     const poppler::document *doc = poppler::document::load_from_file(filepath, password);
     if (!doc) {
         throw std::runtime_error("Error at loadBankStatement");
@@ -45,8 +45,8 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
             std::string line;
 
             while (getline(ss, line)) {
-                if (Transaction t("","", "", "", 0.0, ""); processLine(line, t)) {
-                    result.push_back(t);
+                if (Transaction t("","", "", "", 0.0, ""); processLine(line, t, type)) {
+                    result.push_back(std::make_shared<Transaction>(t));
                 }
             }
             delete p;
@@ -56,47 +56,72 @@ std::vector<Transaction> PdfParser::parseBankStatement(const std::string& filepa
     return result;
 }
 
-bool PdfParser::processLine(const std::string& line, Transaction& outTransaction) {
-    const std::regex pattern(R"((\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\s{3}([^\s-]+)?.*?(\d{1,3}(?:,\d{3})?).*?(\d{1,3}(?:,\d{3})?)\s{3}([^\s-]+)?\s+([^\s-]+|-)?\s+([^\s-]+)?)");
-    std::smatch match;
-    if (std::regex_search(line, match, pattern)) {
-        std::string dateAndTime = match[1];
-        std::string date = match[1].str().substr(0,10);
-        date = date.substr(0,4) + date.substr(5,2)+date.substr(8, 2);
-        std::string time = match[1].str().substr(11,5);
-        std::string summary = match[2];
-        std::string amount_str = match[3];
-        std::string balance = match[4];
-        std::string note = match[5];
-        std::string other_acc = match[6];
-        std::string description = match[7];
-        if (description.find("連加＊") != std::string::npos) description = description.substr(9);
-
-
-
-        if (dateAndTime == "2025/09/19 18:51:44") {
-            return false;
-        }
-
-        std::erase(amount_str, ',');
-        try {
-            double amount = std::stod(amount_str);
-
-            bool isDeposit = (other_acc != "-" && !other_acc.empty() || note == "租金補");
-
-            if (summary == "現金提") description = summary;
-
-            if (!isDeposit) {
-                amount = -amount;
+bool PdfParser::processLine(const std::string& line, Transaction& outTransaction,const std::string& type) {
+    std::string date, time, amount_str,description, other_acc, summary, note, finalType;
+    if (type == "CTBC"){
+        finalType = type;
+        const std::regex pattern(R"((\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2}:\d{2})\s{3}([^\s-]+)?.*?(\d{1,3}(?:,\d{3})?).*?(\d{1,3}(?:,\d{3})?)\s{3}([^\s-]+)?\s+([^\s-]+|-)?\s+([^\s-]+)?)");
+        std::smatch match;
+        if (std::regex_search(line, match, pattern)) {
+            std::string dateAndTime = match[1];
+            date = match[1].str().substr(0,10);
+            date = date.substr(0,4) + date.substr(5,2)+date.substr(8, 2);
+            time = match[1].str().substr(11,5);
+            summary = match[2];
+            amount_str = match[3];
+            std::string balance = match[4];
+            note = match[5];
+            other_acc = match[6];
+            description = match[7];
+            if (dateAndTime == "2025/09/19 18:51:44") {
+                return false;
             }
-
-
-            outTransaction = Transaction("CTBC", date, time, description, amount, "");
-            return true;
         }
-        catch (...) {
-            return false;
+    }
+    else if (type == "POST") {
+        finalType = "POST[Unmatched]";
+        const std::regex pattern(R"(.*?\s{1,}(\d{0,2}\/\d{0,2})\s{1,}(\d{0,2}\/\d{0,2})\s{1,}(.*?)\s{1,}(.*?)\s{1,}(.*?)\s{1,}(\d{0,5}.\d{2})\s{1,}(\d{0,5}))");
+        std::smatch match;
+        if (std::regex_search(line, match, pattern)) {
+            std::string dateA = match[1];
+            std::string dateB = match[2];
+            std::string year = [] {
+                auto now = std::chrono::system_clock::now();
+                auto local_zone = std::chrono::current_zone();
+                auto local_time = local_zone->to_local(now);
+                return std::format("{:%Y}", local_time);
+            }();
+            date = year + dateA.substr(0,2) + dateA.substr(3,2) + "/" + year + dateB.substr(0,2) + dateB.substr(3,2);
+
+            time = "No time";
+            description = match[3];
+            amount_str = match[7];
         }
+    }
+    else {
+        std::cerr << "Invalid input" << std::endl;
+        return false;
+    }
+
+    if (description.find("連加＊" ) != std::string::npos) description = description.substr(9);
+    if (description.find("連支＊" ) != std::string::npos) description = description.substr(9);
+
+    std::erase(amount_str, ',');
+    try {
+        double amount = std::stod(amount_str);
+
+        bool isDeposit = (other_acc != "-" && !other_acc.empty() || note == "租金補");
+
+        if (summary == "現金提") description = summary;
+
+        if (!isDeposit) {
+            amount = -amount;
+        }
+        outTransaction = Transaction(finalType, date, time, description, amount, "No receipt data");
+        return true;
+    }
+    catch (...) {
+        return false;
     }
     return false;
 }
@@ -197,7 +222,8 @@ std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::
         std::stringstream ss(line);
         std::string input;
         std::string date, time, type,AmountStr,balanceStr;
-        std::regex csv_regex(R"((\d{3}\/\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?,(.*?),.*?,"?,?"?(\d{0,3},?\d{0,3}).*?,.*?,?"(\d{0,3},?\d{0,3}).*?,(.*),)");        if (!cont) break;
+        std::regex csv_regex(R"((\d{3}\/\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?,(.*?),.*?,"?,?"?(\d{0,3},?\d{0,3}).*?,.*?,?"(\d{0,3},?\d{0,3}).*?,(.*),)");
+        if (!cont) break;
         std::smatch match;
         if (regex_search(line, match, csv_regex)) {
             date = match[1];

@@ -269,13 +269,14 @@ int main() {
                         else {
                             std::cout << "Invalid input" << std::endl;
                         }
+                        std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
+                        std::cin>>cn;
                     }
                     else {
                         std::cout << "What does this category call ?" << std::endl;
                         std::cin >> oc;
+                        cn = oc;
                     }
-                    std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
-                    std::cin>>cn;
                     std::cout << "Old category name: "<< oc << "\nNew category name:  " << cn << std::endl;
                     std::cout << "Is the data correct? [y or n]" << std::endl;
                     chInput = getch();
@@ -295,7 +296,7 @@ int main() {
             }
 
             case 3: {
-                std::cout << "1.simplified record, 2.detailed record" << std::endl;
+                std::cout << "1.Simplified record, 2.Detailed record" << std::endl;
                 int input;
                 std::cin >> input;
                 switch (input) {
@@ -331,14 +332,14 @@ int main() {
                     case 1: {
                         std::string password;
                         std::cout << "Enter password: "; std::cin >> password;
-                        std::vector <Transaction> imported = PdfParser::parseBankStatement(config.deposit, password);
+                        std::vector <std::shared_ptr<Transaction>> imported = PdfParser::parseBankStatement(config.deposit, password, "CTBC");
                         std::cout << "Correct password! Now importing from "<< config.deposit << std::endl;
                         if (imported.empty()) {
                             std::cerr << "Import failed" << std::endl;
                         }
                         else {
                             for (const auto& item : imported) {
-                                myBookkeeping.push_back(std::make_shared<Transaction>(item));
+                                myBookkeeping.push_back(item);
                             }
                             std::cout << "Success" << std::endl;
                         }

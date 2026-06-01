@@ -13,7 +13,9 @@
 #include <thread>
 #include <conio.h>
 
+#include "Deposit.h"
 #include "httplib.h"
+#include "DataManager.h"
 
 void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>& records) {
     int RecordSize = records.size(), page = 1, maxPage = (RecordSize + 10 - 1) / 10;
@@ -21,10 +23,44 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
     char chInput = 's';
     do {
         if (chInput == 'q' || chInput == 'Q') break;
+
         if ((chInput == 'l' || chInput == 'L') && page > 1) page --;
         else if ((chInput == 'n' || chInput == 'N') && page < maxPage) page ++;
         else {
             if (chInput != 's') std::cout << "Invalid input [Reach the max or min page]" << std::endl;
+        }
+        if (chInput == 'f' || chInput == 'F') {
+            std::vector<std::shared_ptr<Transaction>> tempRecord;
+            std::string input;
+            std::cout << "Type the data you want to show" << std::endl;
+            std::cout << "1.Receipt     2.CTBC      3.POST OFFICE     4.IPass"  << std::endl;
+            std::cin.setf(std::ios::skipws);
+            std::getline(std::cin, input);
+            std::stringstream ss(input);
+            std::string temp;
+            while (ss >> temp) {
+                std::vector<std::shared_ptr<Transaction>> record;
+                if (temp == "1") {
+                    record = receipt::getSimpleRecords(records);
+                }
+                else if (temp == "2") {
+                    record = CTBC::find_CTBC_Record(records);
+                }
+                else if (temp == "3") {
+                    record = POST::find_POST_Record(records);
+                }
+                else if (temp == "4") {
+                    record = IPass::find_IPass_Record(records);
+                }
+                else {
+                    std::cout << "Invalid input [" << temp << "]" << std::endl;
+                    continue;
+                }
+                tempRecord.insert(tempRecord.end(), record.begin(), record.end());
+            }
+            std::ranges::sort(tempRecord, DataManager::compare);
+            displayInList(tempRecord);
+            return;
         }
         std::cout << std::left << std::setw(16) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(22) <<"category" << std::right << std::setw(8) <<"amount | note" << std::endl;
         int index = (page - 1) * 10;
@@ -35,7 +71,7 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             }
         }
         std::cout << "Page: " << page << "/" << maxPage<<  std::endl;
-        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data or press q to quit]" << std::endl;
+        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data or press q to quit]" << std::endl;
         chInput = getch();
         if (chInput == 'd' || chInput == 'D') {
             std::string deleteList;

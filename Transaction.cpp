@@ -23,7 +23,7 @@ receipt::receipt(std::string type,std::string date, std::string time, std::strin
 
 void Transaction::display() const {
     bool leftAlign = true;
-    std::string f_type = DisplayUtil::formatOutput(type, 16, leftAlign);
+    std::string f_type = DisplayUtil::formatOutput(type, 22, leftAlign);
     std::string f_date = DisplayUtil::formatOutput(date, 12, leftAlign);
     std::string f_time = DisplayUtil::formatOutput(time, 10, leftAlign);
     std::string f_category = DisplayUtil::formatOutput(category, 22, leftAlign);
@@ -33,6 +33,10 @@ void Transaction::display() const {
 
 void Transaction::editType(const std::string& type) {
     this ->type = type;
+}
+
+void Transaction::editDate(const std::string &date) {
+    this->date = date;
 }
 
 void Transaction::editDateAndTime(const std::string &date, const std::string &time) {

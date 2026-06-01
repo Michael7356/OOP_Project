@@ -24,6 +24,7 @@ public:
     [[nodiscard]] std::string getNote() const {return note;}
     [[nodiscard]] std::string getDate() const {return date;}
     void editType(const std::string& type);
+    void editDate(const std::string& date);
     void editDateAndTime(const std::string& date, const std::string& time);
     void editCategory(const std::string& category);
     void editNote(const std::string& note);

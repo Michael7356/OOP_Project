@@ -18,7 +18,6 @@ public:
     void display() const;
 
     virtual std::vector<std::shared_ptr<Transaction>> get_Record() const = 0;
-    virtual std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions)  = 0;
 
     static std::shared_ptr<Deposit> deposit_ptr();
 
@@ -36,7 +35,7 @@ public:
 
     void set_password(const std::string& password);
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
-    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
+    static std::vector<std::shared_ptr<Transaction>> find_CTBC_Record(const std::vector<std::shared_ptr<Transaction>> &transactions);
 };
 
 class POST : public Deposit{
@@ -46,14 +45,18 @@ public:
     POST(std::string password): password(std::move(password)){}
 
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
-    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
+    static std::vector<std::shared_ptr<Transaction>> find_POST_Record(const std::vector<std::shared_ptr<Transaction>> &transactions);
+
+    static bool matchUncategorized(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction>> &transactions);
+
+    static bool matchUnmatched(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction>> &transactions);
     static void mergeOriginal(std::vector<std::shared_ptr<Transaction>>& a, std::vector<std::shared_ptr<Transaction>>& b);
 };
 
 class IPass : public Deposit{
 public:
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
-    std::vector<std::shared_ptr<Transaction>> find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) override;
+    static std::vector<std::shared_ptr<Transaction>> find_IPass_Record(const std::vector<std::shared_ptr<Transaction>> &transactions);
 };
 
 

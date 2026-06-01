@@ -10,11 +10,11 @@
 
 class PdfParser {
 private:
-    static bool processLine(const std::string &line, Transaction& outTransaction);
+    static bool processLine(const std::string &line, Transaction& outTransaction, const std::string& type);
     static std::map<std::string, std::string> categoryMap;
 
 public:
-    static std::vector<Transaction> parseBankStatement(const std::string& filepath, const std::string& password);
+    static std::vector<std::shared_ptr<Transaction>> parseBankStatement(const std::string& filepath, const std::string& password, const std::string& type);
 
     static Transaction resolvingRegex_Mail(std::string smsText);
 

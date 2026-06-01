@@ -68,9 +68,9 @@ std::shared_ptr<Deposit> Deposit::deposit_ptr(){
 
 bool Deposit::checkUnique(const std::shared_ptr<Transaction> &record, const std::vector<std::shared_ptr<Transaction>> &transactions) {
     for (const auto& transaction : transactions) {
-        if (transaction == record) return true;
+        if (transaction == record) return false;
     }
-    return false;
+    return true;
 }
 
 void CTBC::set_password(const std::string& password) {
@@ -81,14 +81,10 @@ std::vector<std::shared_ptr<Transaction>> CTBC::get_Record() const {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     std::string filePath = getFilePathWithWindow("PDF");
     if (!filePath.empty()) {
-        std::vector<Transaction> temp;
         try {
-           temp = PdfParser::parseBankStatement(filePath, this->password);
+           tempRecord = PdfParser::parseBankStatement(filePath, this->password, "CTBC");
         }catch(std::runtime_error& e) {
             std::cerr << "Failed, check if your .pdf file is correct one [Error code:" << e.what() << "]" << std::endl;
-        }
-        for (const auto& record : temp) {
-            tempRecord.push_back(std::make_shared<Transaction>(record));
         }
     }
     else {
@@ -97,10 +93,10 @@ std::vector<std::shared_ptr<Transaction>> CTBC::get_Record() const {
     return tempRecord;
 }
 
-std::vector<std::shared_ptr<Transaction>> CTBC::find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) {
+std::vector<std::shared_ptr<Transaction>> CTBC::find_CTBC_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
-        if (transaction->getType() == "CTBC") {
+        if (transaction->getType().find("CTBC") != std::string::npos) {
             tempRecord.push_back(transaction);
         }
     }
@@ -109,18 +105,36 @@ std::vector<std::shared_ptr<Transaction>> CTBC::find_Record(std::vector<std::sha
 
 std::vector<std::shared_ptr<Transaction>> POST::get_Record() const {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
-    std::string filePath = getFilePathWithWindow("CSV");
-    if (!filePath.empty()) {
-        try {
-            tempRecord = csvParser::loadFromFile_PS(filePath);
-        }catch (const std::runtime_error& e) {
-            std::cerr << "Failed, check if your .csv file is correct one [Error code:" << e.what() << "]" << std::endl;
+    std::cout << "Please choose the file that going to be added in." << std::endl;
+    std::cout << "1.PDF file   2.CSV file" << std::endl;
+    std::string input; std::cin >> input;
+    if (input == "1") {
+        std::string filePath = getFilePathWithWindow("PDF");
+        if (!filePath.empty()) {
+            try {
+                tempRecord = PdfParser::parseBankStatement(filePath, this->password, "POST");
+            }catch (const std::runtime_error& e) {
+                std::cerr << "Failed, check if your .csv file is correct one [Error code:" << e.what() << "]" << std::endl;
+            }
         }
+    }
+    else if (input == "2") {
+        std::string filePath = getFilePathWithWindow("CSV");
+        if (!filePath.empty()) {
+            try {
+                tempRecord = csvParser::loadFromFile_PS(filePath);
+            }catch (const std::runtime_error& e) {
+                std::cerr << "Failed, check if your .csv file is correct one [Error code:" << e.what() << "]" << std::endl;
+            }
+        }
+    }
+    else {
+        std::cerr << "Invalid input" << std::endl;
     }
     return tempRecord;
 }
 
-std::vector<std::shared_ptr<Transaction>> POST::find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) {
+std::vector<std::shared_ptr<Transaction>> POST::find_POST_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
         if (transaction->getType().find("POST") != std::string::npos) {
@@ -130,11 +144,62 @@ std::vector<std::shared_ptr<Transaction>> POST::find_Record(std::vector<std::sha
     return tempRecord;
 }
 
+bool POST::matchUncategorized(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction> > &transactions) {
+    for (const auto& record : transactions) {
+        if (transaction->getType() == "POST[Uncategorized]") {
+            int diff = Transaction::compareDate(transaction, record);
+            if (diff >= 0 && diff <= 7) {
+                if (transaction->getAmount() == record->getAmount()) {
+                    record->editType("POST[Uncategorized]");
+                    return true;
+
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool POST::matchUnmatched(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction>> &transactions) {
+    std::string date = transaction->getDate();
+    std::string Tdate = date.substr(0,8);// Transaction date
+    std::string Ddate = date.substr(9,8);// Deduction date
+    for (const auto& record : transactions) {
+        if (record->getType() == "POST[Uncategorized]") {
+            if (record->getTime() == "No Time") {
+                if (Ddate == record->getDate() && transaction->getAmount() == record->getAmount()) {
+                    record->editType("POST[Unmatched]");
+                    record->editDate(Tdate);
+                    record->editCategory(transaction->getCategory());
+                    return true;
+                }
+            }
+            else {
+                if (Tdate == record->getDate() && transaction->getAmount() == record->getAmount()) {
+                    record->editType("POST[Unmatched]");
+                    record->editCategory(transaction->getCategory());
+                    return true;
+
+                }
+            }
+        }
+        else if (record->getType() == "POST[Unconfirm]") {
+            if (Tdate == record->getDate() && transaction->getAmount() == record->getAmount()) {
+                record->editType("POST[Unmatched]");
+                record->editCategory(transaction->getCategory());
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void POST::mergeOriginal(std::vector<std::shared_ptr<Transaction>>& addInTransactions, std::vector<std::shared_ptr<Transaction>>& originalTransaction) {
     std::vector<std::shared_ptr<Transaction>> tempTransactions;
 
     for (const auto& transaction : originalTransaction) {
-        if (transaction->getType() == "POST[Unconfirmed]") {
+        std::string type = transaction->getType();
+        if (type == "POST[Unconfirmed]" || type == "POST[Uncategorized") {
             tempTransactions.push_back(transaction);
         }
     }
@@ -142,17 +207,17 @@ void POST::mergeOriginal(std::vector<std::shared_ptr<Transaction>>& addInTransac
     std::ranges::sort(tempTransactions, DataManager::compare);
     for (const auto& transaction : addInTransactions) {
         bool containOrNot = false;
-        for (const auto& record : tempTransactions) {
-            int diff = Transaction::compareDate(transaction, record);
-            if (diff >= 0 && diff <= 7) {
-                if (transaction->getAmount() == record->getAmount()) {
-                    record->editType("POST[Uncategorized]");
-                    containOrNot = true;
-                    break;
-                }
-            }
+        if (transaction->getType() == "POST[Uncategorized]") {
+            containOrNot = matchUncategorized(transaction, tempTransactions);
         }
-        if (!containOrNot && checkUnique(transaction, originalTransaction)) originalTransaction.push_back(transaction);
+        else if (transaction->getType() == "POST[Unmatched]") {
+            containOrNot = matchUnmatched(transaction, tempTransactions);
+        }
+        if (!containOrNot && checkUnique(transaction, originalTransaction)) {
+
+            originalTransaction.push_back(transaction);
+            tempTransactions.push_back(transaction);
+        }
     }
 }
 
@@ -161,7 +226,7 @@ std::vector<std::shared_ptr<Transaction>> IPass::get_Record() const {
     return tempRecord;
 }
 
-std::vector<std::shared_ptr<Transaction>> IPass::find_Record(std::vector<std::shared_ptr<Transaction>> &transactions) {
+std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
         if (transaction->getType() == "IPass") {
