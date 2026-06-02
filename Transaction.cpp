@@ -38,7 +38,9 @@ void Transaction::editType(const std::string& type) {
 void Transaction::editDate(const std::string &date) {
     this->date = date;
 }
-
+void Transaction::editTime(const std::string &time) {
+    this->time = time;
+}
 void Transaction::editDateAndTime(const std::string &date, const std::string &time) {
     this->date = date;
     this->time = time;
@@ -80,22 +82,22 @@ void Transaction::saveToFile(const std::vector<Transaction>& records, const std:
     }
 }
 
-int Transaction::compareDate(const std::shared_ptr<Transaction>& a, const std::shared_ptr<Transaction>& b) {
+int Transaction::compareDate(const std::shared_ptr<Transaction>& newRecord, const std::shared_ptr<Transaction>& oldRecord) {
     int month[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
-    std::string dateA = a->getDate();
+    std::string dateA = newRecord->getDate();
     int yearA =(std::stoi(dateA.substr(0, 4)) - 2000) * 365;
     int monthA = 0;
     for (int i = 1 ; i <= std::stoi(dateA.substr(4,2)); i++) {
         monthA += month[i];
     }
     int daysA = std::stoi(dateA.substr(6,2)) + monthA + yearA;
-    std::string dateB = b->getDate();
-    int yearB =(std::stoi(dateA.substr(0, 4)) - 2000) * 365;
+    std::string dateB = oldRecord->getDate();
+    int yearB =(std::stoi(dateB.substr(0, 4)) - 2000) * 365;
     int monthB = 0;
-    for (int i = 1 ; i <= std::stoi(dateA.substr(4,2)); i++) {
+    for (int i = 1 ; i <= std::stoi(dateB.substr(4,2)); i++) {
         monthB += month[i];
     }
-    int daysB = std::stoi(dateA.substr(6,2)) + monthA + yearA;
+    int daysB = std::stoi(dateB.substr(6,2)) + monthB + yearB;
 
     return daysA - daysB;
 }
@@ -132,7 +134,7 @@ void receipt::checkUnique( std::vector<receipt>& records,const std::string& file
     records.swap(tempRecords);
 }
 
-std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::vector<std::shared_ptr<Transaction> > &records) {
+std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::vector<std::shared_ptr<Transaction>> &records) {
     std::unordered_map<std::string, size_t> receiptID; //size_t use to tell index of array
     std::vector<std::shared_ptr<Transaction>> tempRecords;
 
@@ -140,22 +142,21 @@ std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::v
         if (!record) continue;
 
         auto rptr = dynamic_cast<const receipt*>(record.get());
-        if (!rptr || rptr->getType() == "Deleted") continue;
 
+        if (!rptr || rptr->getType() == "Deleted") continue;
+        std::cout << rptr->getType() << std::endl;
         std::string receiptNumber = rptr->getReceiptNumber();
         if (!receiptID.contains(receiptNumber)) {
-            auto dataptr = std::dynamic_pointer_cast<receipt>(record);
-            if (dataptr) {
-                dataptr->editType("Receipt(comp)");
-                tempRecords.push_back(std::make_shared<receipt>(*dataptr));
-                receiptID[receiptNumber] = tempRecords.size() - 1;
-            }
+            std::shared_ptr<Transaction> temp = record->clone();
+            tempRecords.push_back(temp);
+            receiptID[receiptNumber] = tempRecords.size() - 1;
         }
         else {
             size_t index = receiptID[receiptNumber];
-            double currAmount = tempRecords[index]->getAmount();
+            double currAmount = std::abs(tempRecords[index]->getAmount());
+            double incomingAmount = std::abs(rptr->getAmount());
             std::string currNote = tempRecords[index]->getNote();
-            tempRecords[index]->editAmount(currAmount + rptr->getAmount());
+            tempRecords[index]->editAmount(currAmount + incomingAmount);
             tempRecords[index]->editNote(currNote + "    " + rptr->getNote());
         }
     }
@@ -168,4 +169,74 @@ std::shared_ptr<Transaction> Transaction::clone() const {
 
 std::shared_ptr<Transaction> receipt::clone() const {
     return std::make_shared<receipt>(*this);
+}
+
+void receipt::deleteReceipt(const std::string &receiptNumber, const std::vector<std::shared_ptr<Transaction>>& transactions) {
+    for (const auto& transaction: transactions) {
+        auto rptr = dynamic_pointer_cast<receipt>(transaction); //shared_ptr is not an object so couldn't use dynamic_cast
+        if (rptr) {
+            if (receiptNumber == rptr->getReceiptNumber()) {
+                rptr->editType("deleted");
+            }
+        }
+    }
+}
+
+void receipt::editMulti(const std::vector<std::string> &receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>> &records) {
+     for (const auto& number : receiptNumber) {
+         for (const auto& record : records) {
+             auto rptr = dynamic_pointer_cast<receipt>(record);
+             if (rptr) {
+                 if (rptr->getReceiptNumber() == number) rptr->editType(type);
+             }
+         }
+     }
+}
+
+void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records) {
+    std::vector<std::shared_ptr<Transaction>> matchRecords;
+    std::vector<std::shared_ptr<Transaction>> receiptRecords = getSimpleRecords(records);
+    for (const auto& record : records) {
+        if (record->getType() == "POST[Unmatched]" || record->getType() == "CTBC") {
+            matchRecords.push_back(record);
+        }
+    }
+    for (const auto& record : matchRecords) { //Transaction data
+        std::vector<std::string> receiptNumber;
+        if (record->getType() == "POST[Unmatched]") {
+            std::shared_ptr<Transaction> temp = record->clone();
+            temp->editDate(record->getDate().substr(0,8)); //Transaction date
+            for (const auto& receiptData : receiptRecords) {
+                int diff = compareDate( receiptData, temp);
+                if (diff <= 1 && diff >= 0 && receiptData->getType() != "UsedData") {
+                    if (std::abs(temp->getAmount()) == std::abs(receiptData->getAmount()) && temp->getCategory() == receiptData->getCategory()) {
+                        auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
+                        receiptNumber.push_back(dataPtr->getReceiptNumber());
+                        receiptData->editType("UsedData");
+                        receiptData->editDate(temp->getDate().substr(0,8));
+                        receiptData->editTime(temp->getTime());
+                        record->editType("Deleted"); //It would be deleted after complete the match
+                        break;
+                    }
+                }
+            }
+            editMulti(receiptNumber, "Receipt(POST)", records);
+        }
+        else if (record->getType() == "CTBC") {
+            for (const auto& receiptData : receiptRecords) {
+                int diff = compareDate(record, receiptData);
+                if (diff >= 0 && diff <= 7 && receiptData->getType() != "UsedData") {
+                    if (record->getAmount() == receiptData->getAmount() * -1 && record->getCategory() == receiptData->getCategory()) {
+                        auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
+                        dataPtr->editType("UsedData");
+                        receiptNumber.push_back(dataPtr->getReceiptNumber());
+                        record->editType("Deleted");
+                        break;
+                    }
+                }
+            }
+            editMulti(receiptNumber, "Receipt(CTBC)", records);
+        }
+    }
+
 }

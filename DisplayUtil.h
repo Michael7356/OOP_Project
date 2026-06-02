@@ -12,8 +12,6 @@ public:
 
     static std::vector<std::string> deleteRecords(const std::vector<std::shared_ptr<Transaction>>& record);
 
-    static void deleteMulti(const std::vector<std::string> &list, const std::vector<std::shared_ptr<Transaction>>& transactions);
-
     static int getVisualWidth(std::string str);
 
     static std::string formatOutput(std::string str, int length, bool leftAlign);

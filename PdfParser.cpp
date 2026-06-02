@@ -194,7 +194,7 @@ std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
         try {
             if (!amountStr.empty()) {
                 double amount = std::stod(amountStr);
-                tempRecords.emplace_back("Receipt", temp[1], "No Time", temp[7], amount, temp[13], temp[2]);
+                tempRecords.emplace_back("Receipt", temp[1], "No Time", temp[7], amount * -1, temp[13], temp[2]);
             }
         }
         catch (std::invalid_argument& e) {
@@ -213,7 +213,6 @@ std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::
         throw std::runtime_error("Error opening file " + filename);
     }
     std::string line;
-    bool cont = true;
     std::getline(inFile, line);
     std::getline(inFile, line); //First two line is useless
     int count = 0;
@@ -223,7 +222,6 @@ std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::
         std::string input;
         std::string date, time, type,AmountStr,balanceStr;
         std::regex csv_regex(R"((\d{3}\/\d{2}\/\d{2})\s{1}(\d{2}:\d{2}).*?,(.*?),.*?,"?,?"?(\d{0,3},?\d{0,3}).*?,.*?,?"(\d{0,3},?\d{0,3}).*?,(.*),)");
-        if (!cont) break;
         std::smatch match;
         if (regex_search(line, match, csv_regex)) {
             date = match[1];

@@ -172,6 +172,10 @@ int main() {
 
         std::cin.ignore(1000, '\n');
         switch (choice) {
+            case 10: {
+                receipt::matchingRecords(myBookkeeping);
+                break;
+            }
             case 9: {
                 std::system("cls");
                 std::map<std::string, std::string> categories = DataManager::getCategories();
@@ -300,16 +304,9 @@ int main() {
                 int input;
                 std::cin >> input;
                 switch (input) {
-
                     case 1: {
-                        std::vector<std::shared_ptr<Transaction>> copy ;
-                        for (const auto& record : myBookkeeping) {
-                            if (record) copy.push_back(record->clone()); //If I don't use this, it would operate myBookkeeping directly
-                        }
-                        std::vector<std::shared_ptr<Transaction>> temp = receipt::getSimpleRecords(copy);
+                        std::vector<std::shared_ptr<Transaction>> temp = receipt::getSimpleRecords(myBookkeeping);
                         DisplayUtil::displayInList(temp);
-                        std::vector<std::string> list = DisplayUtil::deleteRecords(temp);
-                        DisplayUtil::deleteMulti(list, myBookkeeping);
                         break;
                     }
                     case 2: {
@@ -346,8 +343,24 @@ int main() {
                         break;
                     }
                     case 2: {
-                        if(callPython()){
-                            std::string path = PdfParser::getCSVfile("downloads");
+                        std::cout << "Choose one way to download the data " << std::endl;
+                        std::cout << "1. Automatically crawl data   2.Add it manually(.csv file)" << std::endl;
+                        int inputNum; std::cin >> inputNum;
+                        std::string path;
+                        switch (inputNum) {
+                            case 1: {
+                                if(callPython())  path = PdfParser::getCSVfile("downloads");
+                                break;
+                            }
+                            case 2: {
+                                path = Deposit::getFilePathWithWindow("CSV");
+                                break;
+                            }
+                            default:
+                                std::cout << "Invalid input" << std::endl;
+                                break;
+                        }
+                        if (!path.empty()) {
                             std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
                             receipt::checkUnique(receipt_all, config.csv_filename);
                             for (const auto& r : receipt_all) {

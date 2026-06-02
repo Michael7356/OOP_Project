@@ -25,6 +25,7 @@ public:
     [[nodiscard]] std::string getDate() const {return date;}
     void editType(const std::string& type);
     void editDate(const std::string& date);
+    void editTime(const std::string& time);
     void editDateAndTime(const std::string& date, const std::string& time);
     void editCategory(const std::string& category);
     void editNote(const std::string& note);
@@ -48,13 +49,19 @@ public:
     ~receipt() override = default;
 
     receipt(std::string type, std::string date, std::string time, std::string category, double amount, std::string note, std::string receiptNumber);
-    [[nodiscard]] std::string getReceiptNumber() const {return receiptNumber;};
+    [[nodiscard]] std::string getReceiptNumber() const {return this->receiptNumber;}
 
     static void checkUnique(std::vector<receipt>& records, const std::string& filename);
 
     std::shared_ptr<Transaction> clone() const override;
 
     static std::vector<std::shared_ptr<Transaction>> getSimpleRecords(const std::vector<std::shared_ptr<Transaction>>& records);
+
+    static void deleteReceipt(const std::string &receiptNumber, const std::vector<std::shared_ptr<Transaction>>& records);
+
+    static void editMulti(const std::vector<std::string>& receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>>& records);
+
+    static void matchingRecords(std::vector<std::shared_ptr<Transaction>>& records);
 };
 
 #endif

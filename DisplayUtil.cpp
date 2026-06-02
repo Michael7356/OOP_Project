@@ -34,7 +34,7 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             std::string input;
             std::cout << "Type the data you want to show" << std::endl;
             std::cout << "1.Receipt     2.CTBC      3.POST OFFICE     4.IPass"  << std::endl;
-            std::cin.setf(std::ios::skipws);
+            std::cin.ignore(1000,'\n');
             std::getline(std::cin, input);
             std::stringstream ss(input);
             std::string temp;
@@ -84,7 +84,10 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
                 if (std::ranges::all_of(temp, isdigit)) {
                     if (check.insert(std::stoi(temp)).second) {
                         if (0 <= stoi(temp) && stoi(temp) < records.size()) {
-                            if (records[stoi(temp)]->getType() == "Receipt(comp)") records[stoi(temp)]->editType("deleted(comp)");
+                            if (records[stoi(temp)]->getType() == "Receipt(comp)") {
+                                auto rptr = dynamic_cast<receipt*>(records[stoi(temp)].get());
+                                receipt::deleteReceipt(rptr->getReceiptNumber(), records);
+                            }
                             else records[stoi(temp)]->editType("deleted");
                             deleteList += " " + temp;
                         }
@@ -118,19 +121,7 @@ std::vector<std::string> DisplayUtil::deleteRecords(const std::vector<std::share
     return deleteList;
 }
 
-void DisplayUtil::deleteMulti(const std::vector<std::string> &list, const std::vector<std::shared_ptr<Transaction>>& transactions) {
-    for (const auto& delRecord: list) {
-        for (const auto& transaction: transactions) {
-            auto rptr = dynamic_pointer_cast<receipt>(transaction); //shared_ptr is not an object so couldn't use dynamic_cast
-            if (rptr) {
-                std::string target = delRecord;
-                if (delRecord == rptr->getReceiptNumber()) {
-                    rptr->editType("deleted");
-                }
-            }
-        }
-    }
-}
+
 
 int DisplayUtil::getVisualWidth(const std::string str) {
     int width = 0;
