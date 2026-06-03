@@ -17,14 +17,13 @@ using json = nlohmann::json;
 
 void menu() {
     std::cout << "Welcome to my bookkeeping." << std::endl;
-    std::cout << "1. Add a transaction" << std::endl;
-    std::cout << "2. Add a category" << std::endl;
-    std::cout << "3. Show all the transaction" << std::endl;
-    std::cout << "4. Importing data" << std::endl;
-    std::cout << "5. Re-categorize data" << std::endl;
-    std::cout << "6. Exit with store data" << std::endl;
-    std::cout << "7. Exit without store data" << std::endl;
-    std::cout << "Type 1-5 to using this program" << std::endl;
+    std::cout << "1.Transaction" <<std::endl;
+    std::cout << "2.Category" << std::endl;
+    std::cout << "3.Importing data" << std::endl;
+    std::cout << "4.Refresh" << std::endl;
+    std::cout << "5.Exit with store data" << std::endl;
+    std::cout << "6.Exit without store data" << std::endl;
+    std::cout << "Type 1-6 to use this program" << std::endl;
 }
 
 void syncWithGoogle() {
@@ -129,7 +128,11 @@ bool validInput(const std::string& prompt, const std::string& input) {
         return true;
     }
     if (prompt[0] == 'A') {
-        if (!std::ranges::all_of(input, isdigit)) return false;
+        try {
+            std::stoi(input);
+        }catch (std::invalid_argument& e) {
+            return false;
+        }
         return true;
     }
     return true;
@@ -139,7 +142,7 @@ std::string defaultInput(const std::string& prompt, const std::string& defaultVa
     //Use in add transaction
     std::string input;
     std::cout << prompt << " Press 'Enter' to use default value: " << defaultValue << std::endl;
-    if (std::getline(std::cin, input) && !input.empty() ) { //std::ws could ignore the space and \n
+    if (std::getline(std::cin, input) && !input.empty() ) {
         if (validInput(prompt, input)) {
             return input;
         }
@@ -154,14 +157,14 @@ int main() {
     SetConsoleOutputCP(CP_UTF8);
 
     DataManager::checkInitFile("Storage/config.json");
+    DataManager::checkInitFile("Storage/Transaction.csv");
     DataManager::loadCategory("Storage/cate.json");
     const PdfParser::Config config = PdfParser::loadConfig();
     syncWithGoogle();
 
     std::vector<std::shared_ptr<Transaction>> myBookkeeping = DataManager::loadFromFile(config.csv_filename);
-    bool yes = true;
     int choice = 0;
-    while (choice != 6 && choice != 7) {
+    while (choice != 6 && choice != 5) {
         menu();
         if (!(std::cin >> choice)) {
             std::cerr << "Invalid choice" << std::endl;
@@ -172,174 +175,175 @@ int main() {
 
         std::cin.ignore(1000, '\n');
         switch (choice) {
-            case 10: {
-                receipt::matchingRecords(myBookkeeping);
-                break;
-            }
-            case 9: {
-                std::system("cls");
-                std::map<std::string, std::string> categories = DataManager::getCategories();
-                for (const auto& [fst, snd] : categories) {
-                    std:: cout << fst << " is linked to " << snd << std::endl;
-                }
-                char chInput;
-                std::cout << "Press any key to quit" << std::endl;
-                chInput = getch();
-                break;
-            }
-
-            case 8: {
-                std::vector<std::shared_ptr<Transaction>> temp;
-                if (yes) {
-                    std::shared_ptr<Deposit> deposit = Deposit::deposit_ptr();
-                    temp = deposit->get_Record();
-                    if (dynamic_cast<POST*>(deposit.get())) {
-                        POST::mergeOriginal(temp, myBookkeeping);
-                    }
-                    else {
-                        for (const auto& a : temp) {
-                            myBookkeeping.push_back(a);
-                        }
-                    }
-                }
-                DisplayUtil::displayInList(temp);
-
-                yes = false;
-                break;
-            }
-
-            case 1: {
-                std::string d,c,n,t,aStr;
-                double a = 0;
-                char confirm = 'n';
-                do {
-                    std::string today = getTodayDate();
-                    d=defaultInput("Date[YYYYMMDD]: ", today);
-                    t=defaultInput("Time[HH:MM]: ", "No Time");
-                    c=defaultInput("Category: ", "No Category");
-                    aStr=defaultInput("Amount: ", "0");
-                    a = std::stod(aStr);
-                    std::cout << "Note: "; std::getline(std::cin>> std::ws, n);
-
-                    std::cout << "\nPlease confirm the data you've input in " << std::endl;
-                    std::cout << "Date: " << d
-                              << "\nTime: " << t
-                              << "\nCategory: " << c
-                              << "\nAmount: " << a
-                              << "\nNote: " << n << std::endl;
-                    std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data ]" << std::endl;
-                    std::cin>>confirm;
-                    confirm = tolower(confirm);
-                    if (confirm == 'd') {
-                        std::cout << "Data was discarded " << std::endl;
-                        break;
-                    }
-                    std::cin.ignore(10000, '\n');
-                }while (confirm != 'y');
-                if (confirm == 'y') {
-                    myBookkeeping.push_back(make_shared<Transaction>("Other", d, t, c, a, n));
-                    std::cout << "Successfully add into data" << std::endl;
-                }
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                std::system("cls");
-                break;
-            }
-
-            case 2: {
-                std::string input;
-                char chInput;
-                do {
-                    std::string oc, cn;
-                    std::cout << "Do you want to add from the category of file ? [y or n] " << std::endl;
-                    chInput = getch();
-                    if (chInput == 'y' || chInput == 'Y') {
-                        std::set<std::string> categories;
-                        for (const auto& m : myBookkeeping) {
-                            categories.insert(m->getCategory());
-                        }
-                        int count = 0;
-                        std::cout << "Here are the categories that you could choose to add in category map:" << std::endl;
-                        for (const auto& index : categories) {
-                            std::cout << std::right << std::setw(3) << count << ". " << index << std::endl;
-                            count++;
-                        }
-                        std::string intInput;
-                        std::cout << "Choose a category you want to link:" << std::endl;
-                        std::cin >> intInput;
-                        if (std::ranges::all_of(intInput, isdigit) && 0<=stoi(intInput) && stoi(intInput) < categories.size()) {
-                            int index = std::stoi(intInput);
-                            oc = *std::next(categories.begin(), index);
-                        }
-                        else {
-                            std::cout << "Invalid input" << std::endl;
-                        }
-                        std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
-                        std::cin>>cn;
-                    }
-                    else {
-                        std::cout << "What does this category call ?" << std::endl;
-                        std::cin >> oc;
-                        cn = oc;
-                    }
-                    std::cout << "Old category name: "<< oc << "\nNew category name:  " << cn << std::endl;
-                    std::cout << "Is the data correct? [y or n]" << std::endl;
-                    chInput = getch();
-                    if (chInput == 'y' || chInput == 'Y') {
-                        DataManager::addCategory(oc, cn);
-                        for (const auto& m : myBookkeeping) {
-                            DataManager::categoryMapping(m);
-                        }
-                    }
-                    else if (chInput == 'N' || chInput == 'n') {
-                        std::cout << "Discard the data" << std::endl;
-                    }
-                    std::cout << "Do you want to add more category ? [y to continue / other keys quit]" << std::endl;
-                    chInput = getch();
-                }while (chInput == 'y' || chInput == 'Y');
-                break;
-            }
-
-            case 3: {
-                std::cout << "1.Simplified record, 2.Detailed record" << std::endl;
+            case 1: { // Transaction
+                std::cout << "======Transaction======" << std::endl;
+                std::cout << "1. Add Transaction" << std::endl;
+                std::cout << "2. Show Transaction" << std::endl;
                 int input;
                 std::cin >> input;
                 switch (input) {
                     case 1: {
-                        std::vector<std::shared_ptr<Transaction>> temp = receipt::getSimpleRecords(myBookkeeping);
-                        DisplayUtil::displayInList(temp);
+                        std::string d,c,n,t,aStr;
+                        double a = 0;
+                        char confirm = 'n';
+                        do {
+                            std::string today = getTodayDate();
+                            if (std::cin.peek() == '\n')  std::cin.ignore();
+                            d=defaultInput("Date[YYYYMMDD]: ", today);
+                            t=defaultInput("Time[HH:MM]: ", "No Time");
+                            c=defaultInput("Category: ", "No Category");
+                            aStr=defaultInput("Amount(): ", "0");
+                            a = std::stod(aStr);
+                            std::cout << "Note: "; std::getline(std::cin>> std::ws, n);
+
+                            std::cout << "\nPlease confirm the data you've input in " << std::endl;
+                            std::cout << "Date: " << d
+                                      << "\nTime: " << t
+                                      << "\nCategory: " << c
+                                      << "\nAmount: " << a
+                                      << "\nNote: " << n << std::endl;
+                            std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data ]" << std::endl;
+                            std::cin>>confirm;
+                            confirm = tolower(confirm);
+                            if (confirm == 'd') {
+                                std::cout << "Data was discarded " << std::endl;
+                                break;
+                            }
+                            std::cin.ignore(10000, '\n');
+                        }while (confirm != 'y');
+                        if (confirm == 'y') {
+                            myBookkeeping.push_back(make_shared<Transaction>("Other", d, t, c, a, n));
+                            std::cout << "Successfully add into data" << std::endl;
+                        }
+                        std::this_thread::sleep_for(std::chrono::seconds(1));
+                        std::system("cls");
                         break;
                     }
                     case 2: {
-                        DisplayUtil::displayInList(myBookkeeping);
+                        std::cout << "1.Simplified record, 2.Detailed record" << std::endl;
+                        int tempInput;
+                        std::cin >> tempInput;
+                        switch (tempInput) {
+                            case 1: {
+                                std::vector<std::shared_ptr<Transaction>> temp = receipt::getSimpleRecords(myBookkeeping);
+                                DisplayUtil::displayInList(temp);
+                                break;
+                            }
+                            case 2: {
+                                DisplayUtil::displayInList(myBookkeeping);
+                                break;
+                            }
+                            default: {
+                                std::cout << "Invalid input" << std::endl;
+                            }
+                        }
                         break;
                     }
-                    default: {
+                    default:
                         std::cout << "Invalid input" << std::endl;
-                    }
                 }
                 break;
             }
 
-            case 4: {
-                std::cout << "Choose one source to download the data" << std::endl;
-                std::cout << "1.Bank    2.Receipt" << std::endl;
+            case 2: { // Category
+                std::cout << "======Category======" << std::endl;
+                std::cout << "1. Add Category" << std::endl;
+                std::cout << "2. Show Category" << std::endl;
                 int input;
                 std::cin >> input;
                 switch (input) {
                     case 1: {
-                        std::string password;
-                        std::cout << "Enter password: "; std::cin >> password;
-                        std::vector <std::shared_ptr<Transaction>> imported = PdfParser::parseBankStatement(config.deposit, password, "CTBC");
-                        std::cout << "Correct password! Now importing from "<< config.deposit << std::endl;
-                        if (imported.empty()) {
-                            std::cerr << "Import failed" << std::endl;
+                        std::string input1;
+                        char chInput;
+                        do {
+                            std::string oc, cn;
+                            std::cout << "Do you want to add from the category of file ? [y or n] " << std::endl;
+                            chInput = getch();
+                            if (chInput == 'y' || chInput == 'Y') {
+                                std::set<std::string> categories;
+                                for (const auto& m : myBookkeeping) {
+                                    categories.insert(m->getCategory());
+                                }
+                                int count = 0;
+                                std::cout << "Here are the categories that you could choose to add in category map:" << std::endl;
+                                for (const auto& index : categories) {
+                                    std::cout << std::right << std::setw(3) << count << ". " << index << std::endl;
+                                    count++;
+                                }
+                                std::string intInput;
+                                std::cout << "Choose a category you want to link:" << std::endl;
+                                std::cin >> intInput;
+                                if (std::ranges::all_of(intInput, isdigit) && 0<=stoi(intInput) && stoi(intInput) < categories.size()) {
+                                    int index = std::stoi(intInput);
+                                    oc = *std::next(categories.begin(), index);
+                                }
+                                else {
+                                    std::cout << "Invalid input" << std::endl;
+                                    continue;
+                                }
+                                std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
+                                std::cin>>cn;
+                            }
+                            else {
+                                std::cout << "What does this category call ?" << std::endl;
+                                std::cin >> oc;
+                                if (std::cin.peek() == '\n')  std::cin.ignore();
+                                cn = defaultInput("What does this category link to ?", oc);
+                            }
+                            std::cout << "Old category name: "<< oc << "\nNew category name:  " << cn << std::endl;
+                            std::cout << "Is the data correct? [y or n]" << std::endl;
+                            chInput = getch();
+                            if (chInput == 'y' || chInput == 'Y') {
+                                DataManager::addCategory(oc, cn);
+                                DataManager::categoryMapping(myBookkeeping);
+                            }
+                            else if (chInput == 'N' || chInput == 'n') {
+                                std::cout << "Discard the data" << std::endl;
+                            }
+                            std::cout << "Do you want to add more category ? [y to continue / other keys quit]" << std::endl;
+                            chInput = getch();
+                        }while (chInput == 'y' || chInput == 'Y');
+                        break;
+                    }
+                    case 2: {
+                        std::system("cls");
+                        std::map<std::string, std::string> categories = DataManager::getCategories();
+                        for (const auto& [fst, snd] : categories) {
+                            std:: cout << fst << " is linked to " << snd << std::endl;
+                        }
+                        char chInput;
+                        std::cout << "Press any key to quit" << std::endl;
+                        chInput = getch();
+                        break;
+                    }
+                    default:
+                        std::cout << "Invalid input" << std::endl;
+                }
+                std::system("cls");
+                break;
+            }
+
+            case 3: { //Importing data;
+                std::cout << "======Importing Data======" << std::endl;
+                std::cout << "Choose one source to download the data" << std::endl;
+                std::cout << "1.Bank and IPass    2.Receipt" << std::endl;
+                int input;
+                std::cin >> input;
+                switch (input) {
+                    case 1: {
+                        std::vector<std::shared_ptr<Transaction>> temp;
+                        std::shared_ptr<Deposit> deposit = Deposit::deposit_ptr();
+                        temp = deposit->get_Record();
+                        if (dynamic_cast<POST*>(deposit.get())) {
+                            DataManager::categoryMapping(temp);
+                            POST::mergeOriginal(temp, myBookkeeping);
                         }
                         else {
-                            for (const auto& item : imported) {
-                                myBookkeeping.push_back(item);
+                            for (const auto& a : temp) {
+                                myBookkeeping.push_back(a);
                             }
-                            std::cout << "Success" << std::endl;
                         }
+                        DisplayUtil::displayInList(temp);
                         break;
                     }
                     case 2: {
@@ -358,6 +362,7 @@ int main() {
                             }
                             default:
                                 std::cout << "Invalid input" << std::endl;
+                                std::system("cls");
                                 break;
                         }
                         if (!path.empty()) {
@@ -367,11 +372,18 @@ int main() {
                                 myBookkeeping.push_back(std::make_shared<receipt>(r));
                             }
                             std::cout << "Alright, here's result" << std::endl;
+
                             double totalAmount = 0;
                             for (const auto& item : receipt_all) {
                                 totalAmount += item.getAmount();
-                                item.display();
                             }
+                            std::cout << totalAmount << std::endl;
+                            std::vector<std::shared_ptr<Transaction>> temp;
+                            for (const auto& r : receipt_all) {
+                                temp.push_back(std::make_shared<receipt>(r));
+                            }
+                            DisplayUtil::displayInList(temp);
+
                             std::cout << "Total amount: " << totalAmount << std::endl;
                         }
                         break;
@@ -383,15 +395,15 @@ int main() {
                 break;
             }
 
-            case 5: {
-                for (const auto& record : myBookkeeping) {
-                    DataManager::categoryMapping(record);
-                }
+            case 4: {
+                DataManager::categoryMapping(myBookkeeping);
+                receipt::matchingRecords(myBookkeeping);
                 std::ranges::sort(myBookkeeping, DataManager::compare);
+                std::system("cls");
                 break;
             }
 
-            case 6: {
+            case 5: {
                 std::ranges::sort(myBookkeeping, DataManager::compare);
                 DataManager::saveToFile(myBookkeeping, config.csv_filename);
                 DataManager::saveCategory("Storage/cate.json");
@@ -401,7 +413,7 @@ int main() {
                 break;
             }
 
-            case 7: {
+            case 6: {
                 std::cout << "Complete" <<std::endl;
                 std::cout << "Program end in 2 seconds" << std::endl;
                 std::this_thread::sleep_for(std::chrono::seconds(2));

@@ -12,7 +12,7 @@ void Deposit::display() const{
 std::string Deposit::getFilePathWithWindow(const std::string &fileType){
     OPENFILENAMEA ofn;
     char szFile[260] = {0};//Buffer of store the path to the file
-    std::string filter;
+    const char* filter = "All Files (*.*)\0*.*\0";
     if (fileType == "CSV") {
         filter = "CSV Files (*.csv)\0*.csv\0All Files (*.*)\0*.*\0";
     }
@@ -25,11 +25,11 @@ std::string Deposit::getFilePathWithWindow(const std::string &fileType){
     ofn.hwndOwner = nullptr;
     ofn.lpstrFile = szFile;
     ofn.nMaxFile = sizeof(szFile);
-    ofn.lpstrFilter = filter.c_str();
+    ofn.lpstrFilter = filter;
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = nullptr;
     ofn.nMaxFileTitle = 0;
-    ofn.lpstrInitialDir = ".\\Storage"; //Default folder when open
+    ofn.lpstrInitialDir = "."; //Default folder when open
     ofn.lpstrTitle = "Choose the records";
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 
@@ -146,7 +146,7 @@ std::vector<std::shared_ptr<Transaction>> POST::find_POST_Record(const std::vect
 
 bool POST::matchUncategorized(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction> > &transactions) {
     for (const auto& record : transactions) {
-        if (transaction->getType() == "POST[Uncategorized]") {
+        if (record->getType() == "POST[Unconfirmed]") {
             int diff = Transaction::compareDate(transaction, record);
             if (diff >= 0 && diff <= 7) {
                 if (transaction->getAmount() == record->getAmount()) {
@@ -154,6 +154,20 @@ bool POST::matchUncategorized(const std::shared_ptr<Transaction> &transaction, c
                     return true;
 
                 }
+            }
+        }
+        else if (record->getType() == "POST[Unmatched]") {
+            std::string Ddate = record->getDate().substr(9,8); // Deduction date
+            if (transaction->getAmount() == record->getAmount() && Ddate == transaction->getDate()) {
+                transaction->editType("Deleted");
+                return true;
+            }
+;       }
+        else if (record->getType() == "Receipt(POST)") {
+            std::string Ddate = record->getDate().substr(9,8); // Deduction date
+            if (transaction->getAmount() == record->getAmount() && Ddate == transaction->getDate()) {
+                transaction->editType("Deleted");
+                return true;
             }
         }
     }
@@ -169,7 +183,7 @@ bool POST::matchUnmatched(const std::shared_ptr<Transaction> &transaction, const
             if (record->getTime() == "No Time") {
                 if (Ddate == record->getDate() && transaction->getAmount() == record->getAmount()) {
                     record->editType("POST[Unmatched]");
-                    record->editDate(Tdate);
+                    record->editDate(transaction->getDate());
                     record->editCategory(transaction->getCategory());
                     return true;
                 }
@@ -177,17 +191,23 @@ bool POST::matchUnmatched(const std::shared_ptr<Transaction> &transaction, const
             else {
                 if (Tdate == record->getDate() && transaction->getAmount() == record->getAmount()) {
                     record->editType("POST[Unmatched]");
+                    record->editDate(transaction->getDate());
                     record->editCategory(transaction->getCategory());
                     return true;
 
                 }
             }
         }
-        else if (record->getType() == "POST[Unconfirm]") {
+        else if (record->getType() == "POST[Unconfirmed]") {
             if (Tdate == record->getDate() && transaction->getAmount() == record->getAmount()) {
                 record->editType("POST[Unmatched]");
                 record->editCategory(transaction->getCategory());
                 return true;
+            }
+        }
+        else if (record->getType() == "Receipt(POST)") {
+            if (Ddate == record->getDate() && record->getAmount() == transaction->getAmount() && transaction->getCategory() == record->getCategory()) {
+                transaction->editType("Deleted");
             }
         }
     }
@@ -199,7 +219,7 @@ void POST::mergeOriginal(std::vector<std::shared_ptr<Transaction>>& addInTransac
 
     for (const auto& transaction : originalTransaction) {
         std::string type = transaction->getType();
-        if (type == "POST[Unconfirmed]" || type == "POST[Uncategorized") {
+        if (type.find("POST") != std::string::npos) {
             tempTransactions.push_back(transaction);
         }
     }
@@ -214,7 +234,6 @@ void POST::mergeOriginal(std::vector<std::shared_ptr<Transaction>>& addInTransac
             containOrNot = matchUnmatched(transaction, tempTransactions);
         }
         if (!containOrNot && checkUnique(transaction, originalTransaction)) {
-
             originalTransaction.push_back(transaction);
             tempTransactions.push_back(transaction);
         }

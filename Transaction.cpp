@@ -15,6 +15,10 @@
 #include "httplib.h"
 #include "json.hpp"
 
+#define RESET   "\033[0m"
+#define RED     "\033[31m"
+#define GREEN   "\033[32m"
+
 Transaction::Transaction(std::string type, std::string d, std::string t, std::string c, const double a, std::string n)
     :type(std::move(type)), date(std::move(d)), time(std::move(t)), category(std::move(c)), amount(a), note(std::move(n)) {}
 
@@ -24,11 +28,16 @@ receipt::receipt(std::string type,std::string date, std::string time, std::strin
 void Transaction::display() const {
     bool leftAlign = true;
     std::string f_type = DisplayUtil::formatOutput(type, 22, leftAlign);
-    std::string f_date = DisplayUtil::formatOutput(date, 12, leftAlign);
+    std::string f_date = DisplayUtil::formatOutput(date.substr(0,8), 12, leftAlign);
     std::string f_time = DisplayUtil::formatOutput(time, 10, leftAlign);
     std::string f_category = DisplayUtil::formatOutput(category, 22, leftAlign);
     std::cout << f_type << f_date<< f_time << f_category
-              << std::right << std::setw(8) << amount << " | " << note << std::endl;
+              << std::right << std::setw(8);
+    if (amount < 0) std::cout << RED << amount << RESET;
+    else {
+        std::cout << GREEN << amount << RESET;
+    }
+    std::cout << " | " << note << std::endl;
 }
 
 void Transaction::editType(const std::string& type) {
@@ -53,7 +62,7 @@ void Transaction::editNote(const std::string& note) {
     this->note = note;
 }
 void Transaction::editAmount(double amount) {
-    this->amount = amount > 0 ? amount : 0;
+    this->amount = amount;
 }
 
 void Transaction::saveToFile(const std::vector<Transaction>& records, const std::string& filename) {
@@ -144,7 +153,7 @@ std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::v
         auto rptr = dynamic_cast<const receipt*>(record.get());
 
         if (!rptr || rptr->getType() == "Deleted") continue;
-        std::cout << rptr->getType() << std::endl;
+
         std::string receiptNumber = rptr->getReceiptNumber();
         if (!receiptID.contains(receiptNumber)) {
             std::shared_ptr<Transaction> temp = record->clone();
@@ -153,8 +162,8 @@ std::vector<std::shared_ptr<Transaction>> receipt::getSimpleRecords(const std::v
         }
         else {
             size_t index = receiptID[receiptNumber];
-            double currAmount = std::abs(tempRecords[index]->getAmount());
-            double incomingAmount = std::abs(rptr->getAmount());
+            double currAmount = tempRecords[index]->getAmount();
+            double incomingAmount = rptr->getAmount();
             std::string currNote = tempRecords[index]->getNote();
             tempRecords[index]->editAmount(currAmount + incomingAmount);
             tempRecords[index]->editNote(currNote + "    " + rptr->getNote());
@@ -176,7 +185,7 @@ void receipt::deleteReceipt(const std::string &receiptNumber, const std::vector<
         auto rptr = dynamic_pointer_cast<receipt>(transaction); //shared_ptr is not an object so couldn't use dynamic_cast
         if (rptr) {
             if (receiptNumber == rptr->getReceiptNumber()) {
-                rptr->editType("deleted");
+                rptr->editType("Deleted");
             }
         }
     }
@@ -213,7 +222,7 @@ void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records
                         auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
                         receiptNumber.push_back(dataPtr->getReceiptNumber());
                         receiptData->editType("UsedData");
-                        receiptData->editDate(temp->getDate().substr(0,8));
+                        if (receiptData->getAmount() > 0) receiptData->editAmount(receiptData->getAmount() * -1);
                         receiptData->editTime(temp->getTime());
                         record->editType("Deleted"); //It would be deleted after complete the match
                         break;
@@ -226,10 +235,11 @@ void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records
             for (const auto& receiptData : receiptRecords) {
                 int diff = compareDate(record, receiptData);
                 if (diff >= 0 && diff <= 7 && receiptData->getType() != "UsedData") {
-                    if (record->getAmount() == receiptData->getAmount() * -1 && record->getCategory() == receiptData->getCategory()) {
+                    if (abs(record->getAmount()) == abs(receiptData->getAmount())&& record->getCategory() == receiptData->getCategory()) {
                         auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
                         dataPtr->editType("UsedData");
                         receiptNumber.push_back(dataPtr->getReceiptNumber());
+                        if (receiptData->getAmount() > 0) receiptData->editAmount(receiptData->getAmount() * -1);
                         record->editType("Deleted");
                         break;
                     }

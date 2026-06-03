@@ -110,12 +110,15 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
     try {
         double amount = std::stod(amount_str);
 
-        bool isDeposit = (other_acc != "-" && !other_acc.empty() || note == "租金補");
+        bool isDeposit = (other_acc != "-" && !other_acc.empty() || note == "租金補" || note == "存款機");
 
         if (summary == "現金提") description = summary;
 
         if (!isDeposit) {
             amount = -amount;
+        }
+        else {
+            if (!note.empty())description = "存款入帳";
         }
         outTransaction = Transaction(finalType, date, time, description, amount, "No receipt data");
         return true;
@@ -240,8 +243,11 @@ std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile_PS(const std::
         if (!AmountStr.empty()) {
             double amount;
             amount = std::stod(AmountStr);
-            if (type.find("轉入") != std::string::npos || type.find("回饋") != std::string::npos) {
-                tempRecords.push_back(std::make_shared<Transaction>("POST[Uncategorized]", date, time, "No Category",amount, ""));
+            if (type.find("轉入") != std::string::npos || type.find("回饋") != std::string::npos || type.find("續上一筆") != std::string::npos) {
+                tempRecords.push_back(std::make_shared<Transaction>("POST", date, time, type,amount, ""));
+            }
+            else if (type.find("提款") != std::string::npos) {
+                tempRecords.push_back(std::make_shared<Transaction>("POST", date, time, type,amount * -1, ""));
             }
             else {
                 tempRecords.push_back(std::make_shared<Transaction>("POST[Uncategorized]", date, time, "No Category",amount * -1, ""));

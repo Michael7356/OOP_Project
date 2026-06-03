@@ -27,7 +27,7 @@ public:
 
     static std::map<std::string, std::string> getCategories();
 
-    static void categoryMapping (const std::shared_ptr<Transaction>&transaction);
+    static void categoryMapping (const std::vector<std::shared_ptr<Transaction>> &transaction);
 
     static void addCategory(const std::string &OriginCategory, const std::string &CategoryName);
 

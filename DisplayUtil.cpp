@@ -20,21 +20,20 @@
 void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>& records) {
     int RecordSize = records.size(), page = 1, maxPage = (RecordSize + 10 - 1) / 10;
     double totalAmount = 0;
-    char chInput = 's';
+    char chInput = '-';
     do {
         if (chInput == 'q' || chInput == 'Q') break;
 
         if ((chInput == 'l' || chInput == 'L') && page > 1) page --;
+
         else if ((chInput == 'n' || chInput == 'N') && page < maxPage) page ++;
-        else {
-            if (chInput != 's') std::cout << "Invalid input [Reach the max or min page]" << std::endl;
-        }
-        if (chInput == 'f' || chInput == 'F') {
+
+        else if (chInput == 'f' || chInput == 'F') {
             std::vector<std::shared_ptr<Transaction>> tempRecord;
             std::string input;
             std::cout << "Type the data you want to show" << std::endl;
             std::cout << "1.Receipt     2.CTBC      3.POST OFFICE     4.IPass"  << std::endl;
-            std::cin.ignore(1000,'\n');
+            if (std::cin.peek() == '\n')  std::cin.ignore();
             std::getline(std::cin, input);
             std::stringstream ss(input);
             std::string temp;
@@ -60,9 +59,12 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             }
             std::ranges::sort(tempRecord, DataManager::compare);
             displayInList(tempRecord);
-            return;
+            return ;
         }
-        std::cout << std::left << std::setw(16) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(22) <<"category" << std::right << std::setw(8) <<"amount | note" << std::endl;
+
+        else if (chInput != '-') std::cout << "Invalid input [Reach the max or min page]" << std::endl;
+
+        std::cout << std::left << std::setw(8) << "Index" << std::setw(21) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(22) <<"category" << std::right << std::setw(8) <<"amount | note" << std::endl;
         int index = (page - 1) * 10;
         for (int i = index ; i <std::ranges::min(page*10, RecordSize)  ; i ++) {
             if (records[i]) {
@@ -71,12 +73,13 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             }
         }
         std::cout << "Page: " << page << "/" << maxPage<<  std::endl;
-        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data or press q to quit]" << std::endl;
+        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data, 's' to search data or press q to quit]" << std::endl;
         chInput = getch();
         if (chInput == 'd' || chInput == 'D') {
             std::string deleteList;
-            std::cout << "Choose one or multiple things to delete [e.g. 1 2 31 231]" ;
             std::string delIndex, temp;
+            std::cout << "Choose one or multiple things to delete [e.g. 1 2 31 231]" ;
+            if (std::cin.peek() == '\n')  std::cin.ignore();
             std::getline(std::cin, delIndex);
             std::stringstream ss(delIndex);
             std::unordered_set<int> check;
@@ -85,10 +88,10 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
                     if (check.insert(std::stoi(temp)).second) {
                         if (0 <= stoi(temp) && stoi(temp) < records.size()) {
                             if (records[stoi(temp)]->getType() == "Receipt(comp)") {
-                                auto rptr = dynamic_cast<receipt*>(records[stoi(temp)].get());
+                                auto  rptr = dynamic_cast<receipt*>(records[stoi(temp)].get());
                                 receipt::deleteReceipt(rptr->getReceiptNumber(), records);
                             }
-                            else records[stoi(temp)]->editType("deleted");
+                            else records[stoi(temp)]->editType("Deleted");
                             deleteList += " " + temp;
                         }
                         else {
@@ -103,6 +106,20 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             if (!deleteList.empty()) std::cout << "You have deleted" << deleteList << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(2));
         }
+        else if (chInput == 'S' || chInput == 's') {
+            std::string input;
+            std::cout << "[Search Mode]"<< std::endl;
+            std::cout << "Search: ";
+            if (std::cin.peek() == '\n')  std::cin.ignore();
+            std::getline(std::cin, input);
+            std::vector<std::shared_ptr<Transaction>> tempRecord;
+            for (const auto& record : records) {
+                if (record->getNote().find(input) != std::string::npos || record->getCategory().find(input) != std::string::npos) {
+                    tempRecord.push_back(record);
+                }
+            }
+            displayInList(tempRecord);
+        }
         std::system("cls");
     }while (chInput);
 }
@@ -114,14 +131,12 @@ std::vector<std::string> DisplayUtil::deleteRecords(const std::vector<std::share
         if (rptr) {
             if (rptr->getType() == "deleted(comp)") {
                 deleteList.push_back(rptr->getReceiptNumber());
-                rptr->editType("deleted");
+                rptr->editType("Deleted");
             }
         }
     }
     return deleteList;
 }
-
-
 
 int DisplayUtil::getVisualWidth(const std::string str) {
     int width = 0;

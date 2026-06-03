@@ -77,7 +77,8 @@ std::vector<std::shared_ptr<Transaction>> DataManager::loadFromFile(const std::s
         std::getline(ss, amountStr, ',');
         std::getline(ss, note, ',');
         double amount = amountStr.empty()? 0.0 : std::stod(amountStr);
-        if (type == "Receipt") {
+        if (type.empty()) continue;
+        if (type.find("Receipt") != std::string::npos) {
             std::string receiptNumber;
             std::getline(ss, receiptNumber, ',');
             result.push_back(std::make_shared<receipt>(type, date, time, category, amount, note, receiptNumber));
@@ -186,18 +187,20 @@ std::map<std::string, std::string> DataManager::getCategories() {
     return data;
 }
 
-void DataManager::categoryMapping(const std::shared_ptr<Transaction> &transaction) {
-    if (!transaction) {return;}
+void DataManager::categoryMapping(const std::vector<std::shared_ptr<Transaction>> &transactions) {
+    for (const auto& transaction : transactions) {
+        if (!transaction) {return;}
 
-    auto it = data.find(transaction->getCategory());
-    if (it != data.end()) {
-        transaction->editCategory(it->second);
-        return;
-    }
-    for (const auto& [fst, snd] : data) {
-        if (transaction->getCategory().find(fst) != std::string::npos) {
-            transaction->editCategory(snd);
-            return;
+        auto it = data.find(transaction->getCategory());
+        if (it != data.end()) {
+            transaction->editCategory(it->second);
+            continue;
+        }
+        for (const auto& [fst, snd] : data) {
+            if (transaction->getCategory().find(fst) != std::string::npos) {
+                transaction->editCategory(snd);
+                break;
+            }
         }
     }
 }
