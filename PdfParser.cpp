@@ -110,7 +110,7 @@ bool PdfParser::processLine(const std::string& line, Transaction& outTransaction
     try {
         double amount = std::stod(amount_str);
 
-        bool isDeposit = (other_acc != "-" && !other_acc.empty() || note == "租金補" || note == "存款機");
+        bool isDeposit = (other_acc != "-" && !other_acc.empty() && summary != "信託" || summary == "信託" && other_acc == "-" && amount <= 1000 || note == "租金補" || note == "存款機");
 
         if (summary == "現金提") description = summary;
 

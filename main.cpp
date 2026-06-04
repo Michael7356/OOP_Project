@@ -220,7 +220,7 @@ int main() {
                         break;
                     }
                     case 2: {
-                        std::cout << "1.Simplified record, 2.Detailed record" << std::endl;
+                        std::cout << "1.Receipt record, 2.Detailed record" << std::endl;
                         int tempInput;
                         std::cin >> tempInput;
                         switch (tempInput) {
@@ -259,10 +259,18 @@ int main() {
                             std::string oc, cn;
                             std::cout << "Do you want to add from the category of file ? [y or n] " << std::endl;
                             chInput = getch();
+                            std::map<std::string, std::string> loadedCategories = DataManager::getCategories();
                             if (chInput == 'y' || chInput == 'Y') {
                                 std::set<std::string> categories;
                                 for (const auto& m : myBookkeeping) {
-                                    categories.insert(m->getCategory());
+                                    bool contain = false;
+                                    for (const auto& [fst, snd] :loadedCategories) {
+                                        if (fst == m->getCategory() || snd == m->getCategory()) {
+                                            contain = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!contain) categories.insert(m->getCategory());
                                 }
                                 int count = 0;
                                 std::cout << "Here are the categories that you could choose to add in category map:" << std::endl;
@@ -279,7 +287,7 @@ int main() {
                                 }
                                 else {
                                     std::cout << "Invalid input" << std::endl;
-                                    continue;
+                                    break;
                                 }
                                 std::cout << "What does this category link (" << oc << ") to ?" << std::endl;
                                 std::cin>>cn;
@@ -308,12 +316,44 @@ int main() {
                     case 2: {
                         std::system("cls");
                         std::map<std::string, std::string> categories = DataManager::getCategories();
+                        std::vector<std::string> categoryKeys;
+                        int count = 0;
                         for (const auto& [fst, snd] : categories) {
-                            std:: cout << fst << " is linked to " << snd << std::endl;
+                            std:: cout << count << ". " << fst << " is linked to " << snd << std::endl;
+                            categoryKeys.push_back(fst);
+                            count++;
                         }
                         char chInput;
-                        std::cout << "Press any key to quit" << std::endl;
+                        std::cout << "Press 'e' to erase link or press any key to quit" << std::endl;
                         chInput = getch();
+                        if (chInput == 'e' || chInput == 'E') {
+                            std::string tempInput, temp;
+                            std::cout << "Choose one or multiple category to delete [e.g. 1 2 31 231]" << std::endl;
+                            if (std::cin.peek() == '\n')  std::cin.ignore();
+                            std::getline(std::cin, tempInput);
+                            std::stringstream ss(tempInput);
+                            std::set<std::string> categoriesDeleted;
+                            while (ss >> temp) {
+                                int index;
+                                if (std::ranges::all_of(temp, isdigit)) index = std::stoi(temp);
+                                else {
+                                    std::cout << temp << " is not a valid index" << std::endl;
+                                    continue;
+                                }
+                                if (0 <= index && index < categoryKeys.size()) {
+                                    if (categoriesDeleted.insert(categoryKeys[index]).second) DataManager::removeCategory(categoryKeys[index]);
+                                }
+                                else std::cout << temp << " is not a valid index" << std::endl;
+                            }
+                            if (!categoriesDeleted.empty()) std::cout << "You had deleted";
+                            for (const auto& dele : categoriesDeleted) {
+                                 std::cout << " " << dele;
+                            }
+                            std::cout << "\nBack to main menu in 2 seconds" << std::endl;
+                            std::this_thread::sleep_for(std::chrono::seconds(1));
+                            std::cout <<"Back to main menu in 1 second" << std::endl;
+                            std::this_thread::sleep_for(std::chrono::seconds(1));
+                        }
                         break;
                     }
                     default:
@@ -326,7 +366,8 @@ int main() {
             case 3: { //Importing data;
                 std::cout << "======Importing Data======" << std::endl;
                 std::cout << "Choose one source to download the data" << std::endl;
-                std::cout << "1.Bank and IPass    2.Receipt" << std::endl;
+                std::cout << "1.Bank and IPass" << std::endl;
+                std::cout <<" 2.Receipt" << std::endl;
                 int input;
                 std::cin >> input;
                 switch (input) {
