@@ -59,6 +59,9 @@ std::shared_ptr<Deposit> Deposit::deposit_ptr(){
             std::cin >> password;
             return std::make_shared<POST>(password);
         }
+        case 3: {
+            return std::make_shared<IPass>();
+        }
         default :
             std::cerr << "Invalid input" << std::endl;
             break;
@@ -70,6 +73,34 @@ bool Deposit::checkUnique(const std::shared_ptr<Transaction> &record, const std:
     for (const auto& transaction : transactions) {
         if (transaction == record) return false;
     }
+    return true;
+}
+
+bool Deposit::callPython(std::string filename) {
+    std::string Pypath = R"(..\Python_auto\.venv\Scripts\python.exe)";
+    std::string script = "..\\Python_auto\\" + filename;
+
+    std::string command = Pypath + " " + script;
+    std::cout << "Hold on a second" << std::endl;
+
+    int result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Failed to run script" << std::endl;
+        std::cout << "Make sure your account and password are correct" << std::endl;
+        std::cout << "Do you want to call it again? [y or n]" << std::endl;
+        std::string input;
+        while (std::cin >> input) {
+            if(input == "y" || input == "Y" || input == "N"|| input == "n") {
+                if (input == "y" || input == "Y") {
+                    callPython(filename);
+                    break;
+                }
+                return false;
+            }
+            std::cout << "Not a valid choice" << std::endl;
+        }
+    }
+    std::cout << "Success" << std::endl;
     return true;
 }
 
@@ -242,15 +273,86 @@ void POST::mergeOriginal(std::vector<std::shared_ptr<Transaction>>& addInTransac
 
 std::vector<std::shared_ptr<Transaction>> IPass::get_Record() const {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
+    std::string path;
+    if (callPython("iPass.py")) path = PdfParser::getCSVfile("downloads");
+    if (!path.empty()) {
+        std::ifstream inFile(path);
+        if (!inFile.is_open()) {
+            std::cerr << "Error at iPass get record" << std::endl;
+        }
+        std::string line;
+        std::getline(inFile, line); // First line is not our target
+        while (std::getline(inFile, line)) {
+            std::vector<std::string> tokens;
+            std::stringstream ss (line);
+            std::string input;
+            for (int i = 0 ; i < 6 ; i ++) {
+                std::getline(ss, input, ',');
+                tokens.push_back(input);
+            }
+            double amount = 0;
+            try {
+                amount = std::stod(tokens[5]);
+            }catch(std::invalid_argument& e) {
+                std::cerr << e.what() << std::endl;
+            }
+            if (tokens[3] != "里程下車" && tokens[3] != "里程上車" && tokens[4].find("客運") == std::string::npos && tokens[4].find("捷運") == std::string::npos) {
+                tempRecord.push_back(std::make_shared<Transaction>(tokens[0], tokens[1], tokens[2], tokens[4], amount, tokens[3]));
+            }
+            else {
+                tempRecord.push_back(std::make_shared<Transaction>("IPass(Transportation)",tokens[1], tokens[2], tokens[4], amount, tokens[3]));
+            }
+        }
+    }
     return tempRecord;
 }
 
 std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
+    std::cout << "Choose one way to show IPass data" << std::endl;
+    std::cout << "1. Show all transaction data (include transportation record)" << std::endl;
+    std::cout << "2. Only show transaction data" << std::endl;
+    std::cout << "3. Only show transportation data" << std::endl;
+    int input; std::cin >> input;
     std::vector<std::shared_ptr<Transaction>> tempRecord;
-    for (const auto& transaction : transactions) {
-        if (transaction->getType() == "IPass") {
-            tempRecord.push_back(transaction);
+    switch (input) {
+        case 1: {
+            for (const auto& transaction : transactions) {
+                if (transaction->getType().find("IPass") != std::string::npos) {
+                    tempRecord.push_back(transaction);
+                }
+            }
+            break;
         }
+        case 2: {
+            for (const auto& transaction : transactions) {
+                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "IPass(Transportation)") {
+                    tempRecord.push_back(transaction);
+                }
+            }
+            break;
+        }
+        case 3: {
+            for (const auto& transaction : transactions) {
+                if (transaction->getType() == "IPass(Transportation)") {
+                    tempRecord.push_back(transaction);
+                }
+            }
+            break;
+        }
+        default:
+            std::cerr << "Invalid choice" << std::endl;
     }
     return tempRecord;
+}
+
+bool IPass::checkRecord(const std::shared_ptr<Transaction> &record, const std::vector<std::shared_ptr<Transaction> > &transactions) {
+    for (const auto& transaction : transactions) {
+        if (transaction->getType().find("IPass") != std::string::npos) {
+            if (transaction->getTime() == record->getTime() && transaction->getDate() == record->getDate()) {
+                record->editType("Deleted");
+                return true;
+            }
+        }
+    }
+    return false;
 }

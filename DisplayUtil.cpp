@@ -18,8 +18,8 @@
 #include "DataManager.h"
 
 void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>& records) {
+    std::system("cls");
     int RecordSize = records.size(), page = 1, maxPage = (RecordSize + 10 - 1) / 10;
-    double totalAmount = 0;
     char chInput = '-';
     do {
         if (chInput == 'q' || chInput == 'Q') break;
@@ -62,7 +62,9 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             return ;
         }
 
-        else if (chInput != '-') std::cout << "Invalid input [Reach the max or min page]" << std::endl;
+        else if (chInput != '-') {
+            std::cout << "Invalid input [Reach the max or min page]" << std::endl;
+        }
 
         std::cout << std::left << std::setw(8) << "Index" << std::setw(21) << "type" <<std::setw(12) << "date" << std::setw(10) << "time" << std::setw(22) <<"category" << std::right << std::setw(8) <<"amount | note" << std::endl;
         int index = (page - 1) * 10;
@@ -76,6 +78,7 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
         std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data, 's' to search data or press q to quit]" << std::endl;
         chInput = getch();
         if (chInput == 'd' || chInput == 'D') {
+            chInput = '-';
             std::string deleteList;
             std::string delIndex, temp;
             std::cout << "Choose one or multiple things to delete [e.g. 1 2 31 231]" ;

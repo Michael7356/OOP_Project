@@ -32,7 +32,7 @@ public:
 
 class csvParser : public PdfParser {
 public:
-    static std::vector<receipt> loadFromFile (const std::string &filename) ; // Use for capture the receipt data
+    static std::vector<std::shared_ptr<Transaction>> loadFromFile (const std::string &filename) ; // Use for capture the receipt data
 
     static std::vector<std::shared_ptr<Transaction>> loadFromFile_PS(const std::string &filepath);
 };

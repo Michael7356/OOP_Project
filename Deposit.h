@@ -23,6 +23,8 @@ public:
 
     static bool checkUnique(const std::shared_ptr<Transaction> &record, const std::vector<std::shared_ptr<Transaction>> &transactions);
 
+    static bool callPython(const std::string filename);
+
     static std::string getFilePathWithWindow(const std::string &fileType);
     virtual ~Deposit() = default;
 };
@@ -55,8 +57,10 @@ public:
 
 class IPass : public Deposit{
 public:
+    static void setBus(const std::vector<std::shared_ptr<Transaction>> &transactions);
     std::vector<std::shared_ptr<Transaction>> get_Record() const override;
     static std::vector<std::shared_ptr<Transaction>> find_IPass_Record(const std::vector<std::shared_ptr<Transaction>> &transactions);
+    static bool checkRecord(const std::shared_ptr<Transaction> &transaction, const std::vector<std::shared_ptr<Transaction>> &transactions);
 };
 
 

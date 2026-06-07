@@ -147,7 +147,7 @@ Transaction PdfParser::resolvingRegex_Mail(std::string smsText) {
         std::string amountStr = match[3];
         std::erase(amountStr, ',');
         double amount = std::stod(amountStr);
-        Transaction t = {"POST[Unconfirmed]", date, time, "No Category", amount, "No note"};
+        Transaction t = {"POST[Unconfirmed]", date, time, "No Category", amount * -1, "No note"};
         return t;
     }
     throw std::runtime_error("Error at loadBankStatement");
@@ -169,8 +169,8 @@ std::string PdfParser::getCSVfile(const std::string& path) {
 }
 
 
-std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
-    std::vector<receipt> tempRecords;
+std::vector<std::shared_ptr<Transaction>> csvParser::loadFromFile(const std::string& filename) {
+    std::vector<std::shared_ptr<Transaction>> tempRecords;
     std::ifstream inFile(filename);
     if (!inFile.is_open()) {
         std::cerr << "Error opening file " << filename<< std::endl;
@@ -197,13 +197,12 @@ std::vector<receipt> csvParser::loadFromFile(const std::string& filename) {
         try {
             if (!amountStr.empty()) {
                 double amount = std::stod(amountStr);
-                tempRecords.emplace_back("Receipt", temp[1], "No Time", temp[7], amount * -1, temp[13], temp[2]);
+                tempRecords.push_back(std::make_shared<receipt>("Receipt", temp[1], "No Time", temp[7], amount * -1, temp[13], temp[2]));
             }
         }
         catch (std::invalid_argument& e) {
             std::cerr << "Error when trying to convert " << input << std::endl;
         }
-
     }
     inFile.close();
     return tempRecords;

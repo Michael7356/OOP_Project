@@ -35,6 +35,8 @@ public:
 
     static int compareDate(const std::shared_ptr<Transaction>& a, const std::shared_ptr<Transaction>& b);
 
+    static double calculateThisMonthAmount(const std::vector<std::shared_ptr<Transaction>>& records);
+
     bool operator ==(const std::shared_ptr<Transaction>&) const;
 
     virtual std::shared_ptr<Transaction> clone() const;
@@ -51,7 +53,7 @@ public:
     receipt(std::string type, std::string date, std::string time, std::string category, double amount, std::string note, std::string receiptNumber);
     [[nodiscard]] std::string getReceiptNumber() const {return this->receiptNumber;}
 
-    static void checkUnique(std::vector<receipt>& records, const std::string& filename);
+    static void checkUnique(std::vector<std::shared_ptr<Transaction>>& records, const std::string& filename);
 
     std::shared_ptr<Transaction> clone() const override;
 
@@ -59,7 +61,9 @@ public:
 
     static void deleteReceipt(const std::string &receiptNumber, const std::vector<std::shared_ptr<Transaction>>& records);
 
-    static void editMulti(const std::vector<std::string>& receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>>& records);
+    static void editMultiType(const std::vector<std::string>& receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>>& records);
+
+    static void editMultiTime(const std::string& receiptNumber, const std::string &time, std::vector<std::shared_ptr<Transaction>>& records);
 
     static void matchingRecords(std::vector<std::shared_ptr<Transaction>>& records);
 };

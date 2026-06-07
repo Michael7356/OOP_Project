@@ -111,14 +111,28 @@ int Transaction::compareDate(const std::shared_ptr<Transaction>& newRecord, cons
     return daysA - daysB;
 }
 
+double Transaction::calculateThisMonthAmount(const std::vector<std::shared_ptr<Transaction>> &records) {
+    double totalAmount = 0;
+    const std::string date = [] {
+        auto now = std::chrono::system_clock::now();
+        auto local_zone = std::chrono::current_zone();
+        auto local_time = local_zone->to_local(now);
+        return std::format("{:%Y%m}", local_time);
+    }();
+    for (const auto& record : records) {
+        if (record->getDate().substr(0,6) == date) totalAmount += record->getAmount() * -1; // We need positive number
+    }
+    return totalAmount;
+}
+
 bool Transaction::operator ==(const std::shared_ptr<Transaction>& other) const {
     if (this->getDate() == other->getDate() && this->getTime() == other->getTime() && this->getCategory() == other->getCategory() && this->getAmount() == other->getAmount() && this->getNote() == other->getNote()) return true;
     return false;
 }
 
-void receipt::checkUnique( std::vector<receipt>& records,const std::string& filename) {
+void receipt::checkUnique( std::vector<std::shared_ptr<Transaction>>& records,const std::string& filename) {
     std::unordered_set<std::string>receiptID;
-    std::vector<receipt> tempRecords;
+    std::vector<std::shared_ptr<Transaction>> tempRecords;
     std::ifstream inFile(filename);
     if (!inFile.is_open()) {
         std::cerr << "Error at checkUnique" << std::endl;
@@ -134,9 +148,13 @@ void receipt::checkUnique( std::vector<receipt>& records,const std::string& file
         std::getline(ss, input, ',');
         receiptID.insert(input);
     }
+
     for (const auto& r :records) {
-        if (!receiptID.contains(r.getReceiptNumber())) { //contains function was added at C++20
-            tempRecords.push_back(r);
+        auto rptr = dynamic_cast<const receipt*>(r.get());
+        if (rptr) {
+            if (!receiptID.contains(rptr->getReceiptNumber())) { //contains function was added at C++20
+                tempRecords.push_back(r);
+            }
         }
     }
     inFile.close();
@@ -191,7 +209,7 @@ void receipt::deleteReceipt(const std::string &receiptNumber, const std::vector<
     }
 }
 
-void receipt::editMulti(const std::vector<std::string> &receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>> &records) {
+void receipt::editMultiType(const std::vector<std::string> &receiptNumber, const std::string &type, std::vector<std::shared_ptr<Transaction>> &records) {
      for (const auto& number : receiptNumber) {
          for (const auto& record : records) {
              auto rptr = dynamic_pointer_cast<receipt>(record);
@@ -202,11 +220,20 @@ void receipt::editMulti(const std::vector<std::string> &receiptNumber, const std
      }
 }
 
+void receipt::editMultiTime(const std::string &receiptNumber, const std::string &time, std::vector<std::shared_ptr<Transaction>> &records) {
+    for (const auto& record : records) {
+        auto rptr = dynamic_pointer_cast<receipt>(record);
+        if (rptr) {
+            if (rptr->getReceiptNumber() == receiptNumber) rptr->editTime(time);
+        }
+    }
+}
+
 void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records) {
     std::vector<std::shared_ptr<Transaction>> matchRecords;
     std::vector<std::shared_ptr<Transaction>> receiptRecords = getSimpleRecords(records);
     for (const auto& record : records) {
-        if (record->getType() == "POST[Unmatched]" || record->getType() == "CTBC") {
+        if (record->getType() == "POST[Unmatched]" || record->getType() == "CTBC" || record->getType() == "IPass") {
             matchRecords.push_back(record);
         }
     }
@@ -229,7 +256,7 @@ void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records
                     }
                 }
             }
-            editMulti(receiptNumber, "Receipt(POST)", records);
+            editMultiType(receiptNumber, "Receipt(POST)", records);
         }
         else if (record->getType() == "CTBC") {
             for (const auto& receiptData : receiptRecords) {
@@ -245,8 +272,33 @@ void receipt::matchingRecords(std::vector<std::shared_ptr<Transaction>>& records
                     }
                 }
             }
-            editMulti(receiptNumber, "Receipt(CTBC)", records);
+            editMultiType(receiptNumber, "Receipt(CTBC)", records);
+        }
+        else if (record->getType() == "IPass") {
+            for (const auto& receiptData : receiptRecords) {
+                int diff = compareDate( record, receiptData);
+                if (diff >= 0 && diff <= 1 && receiptData->getCategory() == record->getCategory()){
+                    if (record->getAmount() == receiptData->getAmount()) {
+                        auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
+                        dataPtr->editType("UsedData");
+                        receiptNumber.push_back(dataPtr->getReceiptNumber());
+                        record->editType("Deleted");
+                        editMultiTime(dataPtr->getReceiptNumber(), record->getTime(), records);
+                        break;
+                    }
+                    if (receiptData->getNote().find("提貨卡") != std::string::npos && receiptData->getAmount() + 5 == record->getAmount()) {
+                        auto dataPtr = std::dynamic_pointer_cast<receipt>(receiptData);
+                        dataPtr->editType("UsedData");
+                        receiptNumber.push_back(dataPtr->getReceiptNumber());
+                        dataPtr->editAmount(record->getAmount());
+                        record->editType("Deleted");
+                        editMultiTime(dataPtr->getReceiptNumber(), record->getTime(), records);
+                        break;
+                    }
+                }
+            }
+            editMultiType(receiptNumber, "Receipt(IPass)", records);
+
         }
     }
-
 }

@@ -65,34 +65,6 @@ void syncWithGoogle() {
     }
 }
 
-bool callPython() {
-    std::string Pypath = R"(..\Python_auto\.venv\Scripts\python.exe)";
-    std::string script = "..\\Python_auto\\CaptureReceipt.py";
-
-    std::string command = Pypath + " " + script;
-    std::cout << "Hold on a second" << std::endl;
-
-    int result = std::system(command.c_str());
-    if (result != 0) {
-        std::cerr << "Failed to run script" << std::endl;
-        std::cout << "Make sure your account and password are correct" << std::endl;
-        std::cout << "Do you want to call it again? [y or n]" << std::endl;
-        std::string input;
-        while (std::cin >> input) {
-            if(input == "y" || input == "Y" || input == "N"|| input == "n") {
-                if (input == "y" || input == "Y") {
-                    callPython();
-                    break;
-                }
-                return false;
-            }
-            std::cout << "Not a valid choice" << std::endl;
-        }
-    }
-    std::cout << "Success" << std::endl;
-    return true;
-}
-
 std::string getTodayDate() {
     auto now = std::chrono::system_clock::now();
     auto local_zone = std::chrono::current_zone();
@@ -166,13 +138,14 @@ int main() {
     int choice = 0;
     while (choice != 6 && choice != 5) {
         menu();
+        std::cout << "===== This month you had spent: " << Transaction::calculateThisMonthAmount(myBookkeeping) << " dollars =====" << std::endl;
         if (!(std::cin >> choice)) {
             std::cerr << "Invalid choice" << std::endl;
             std::cin.clear();
             std::cin.ignore(10000, '\n');
             continue;
         }
-
+        std::ranges::sort(myBookkeeping, DataManager::compare);
         std::cin.ignore(1000, '\n');
         switch (choice) {
             case 1: { // Transaction
@@ -183,6 +156,7 @@ int main() {
                 std::cin >> input;
                 switch (input) {
                     case 1: {
+                        std::system("cls");
                         std::string d,c,n,t,aStr;
                         double a = 0;
                         char confirm = 'n';
@@ -202,14 +176,13 @@ int main() {
                                       << "\nCategory: " << c
                                       << "\nAmount: " << a
                                       << "\nNote: " << n << std::endl;
-                            std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data ]" << std::endl;
+                            std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data(quit) ]" << std::endl;
                             std::cin>>confirm;
                             confirm = tolower(confirm);
                             if (confirm == 'd') {
                                 std::cout << "Data was discarded " << std::endl;
                                 break;
                             }
-                            std::cin.ignore(10000, '\n');
                         }while (confirm != 'y');
                         if (confirm == 'y') {
                             myBookkeeping.push_back(make_shared<Transaction>("Other", d, t, c, a, n));
@@ -220,7 +193,9 @@ int main() {
                         break;
                     }
                     case 2: {
-                        std::cout << "1.Receipt record, 2.Detailed record" << std::endl;
+                        std::cout << "Choose a record type to display" << std::endl;
+                        std::cout << "1. Receipt record" << std::endl;
+                        std::cout << "2. Detailed record" << std::endl;
                         int tempInput;
                         std::cin >> tempInput;
                         switch (tempInput) {
@@ -363,11 +338,11 @@ int main() {
                 break;
             }
 
-            case 3: { //Importing data;
+            case 3: { //Importing data
                 std::cout << "======Importing Data======" << std::endl;
                 std::cout << "Choose one source to download the data" << std::endl;
                 std::cout << "1.Bank and IPass" << std::endl;
-                std::cout <<" 2.Receipt" << std::endl;
+                std::cout << "2.Receipt" << std::endl;
                 int input;
                 std::cin >> input;
                 switch (input) {
@@ -381,6 +356,11 @@ int main() {
                         }
                         else {
                             for (const auto& a : temp) {
+                                if (dynamic_cast<IPass*>(deposit.get())) {
+                                    if (IPass::checkRecord(a, myBookkeeping)){
+                                        continue;
+                                    }
+                                }
                                 myBookkeeping.push_back(a);
                             }
                         }
@@ -394,7 +374,7 @@ int main() {
                         std::string path;
                         switch (inputNum) {
                             case 1: {
-                                if(callPython())  path = PdfParser::getCSVfile("downloads");
+                                if(Deposit::callPython("CaptureReceipt.py"))  path = PdfParser::getCSVfile("downloads");
                                 break;
                             }
                             case 2: {
@@ -407,25 +387,20 @@ int main() {
                                 break;
                         }
                         if (!path.empty()) {
-                            std::vector<receipt> receipt_all =  csvParser::loadFromFile(path);
+                            std::vector<std::shared_ptr<Transaction>> receipt_all =  csvParser::loadFromFile(path);
                             receipt::checkUnique(receipt_all, config.csv_filename);
                             for (const auto& r : receipt_all) {
-                                myBookkeeping.push_back(std::make_shared<receipt>(r));
+                                myBookkeeping.push_back(r);
                             }
                             std::cout << "Alright, here's result" << std::endl;
-
+                            std::vector<std::shared_ptr<Transaction>> temp;
                             double totalAmount = 0;
                             for (const auto& item : receipt_all) {
-                                totalAmount += item.getAmount();
+                                totalAmount += item->getAmount();
+                                temp.push_back(item);
                             }
                             std::cout << totalAmount << std::endl;
-                            std::vector<std::shared_ptr<Transaction>> temp;
-                            for (const auto& r : receipt_all) {
-                                temp.push_back(std::make_shared<receipt>(r));
-                            }
                             DisplayUtil::displayInList(temp);
-
-                            std::cout << "Total amount: " << totalAmount << std::endl;
                         }
                         break;
                     }
@@ -436,28 +411,34 @@ int main() {
                 break;
             }
 
-            case 4: {
+            case 4: {// Refresh
                 DataManager::categoryMapping(myBookkeeping);
                 receipt::matchingRecords(myBookkeeping);
                 std::ranges::sort(myBookkeeping, DataManager::compare);
                 std::system("cls");
+                std::cout << "[Refresh completed]" << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 break;
             }
 
-            case 5: {
+            case 5: { //store data
                 std::ranges::sort(myBookkeeping, DataManager::compare);
                 DataManager::saveToFile(myBookkeeping, config.csv_filename);
                 DataManager::saveCategory("Storage/cate.json");
                 std::cout << "Complete"<< std::endl;
                 std::cout << "Program end in 2 seconds" << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(2));
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::cout << "Program end in 1 seconds" << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
                 break;
             }
 
-            case 6: {
+            case 6: { // don't store data
                 std::cout << "Complete" <<std::endl;
                 std::cout << "Program end in 2 seconds" << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(2));
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                std::cout << "Program end in 1 seconds" << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
                 break;
             }
 
