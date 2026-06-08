@@ -16,7 +16,7 @@
 </h4>
 
   ```bash
-  git clone [https://github.com/Michael7356/OOP_Project.git](https://github.com/Michael7356/OOP_Project.git)
+git clone https://github.com/Michael7356/OOP_Project.git
 cd OOP_Project/Python_auto
 pip install -r requirements.txt
 ```
