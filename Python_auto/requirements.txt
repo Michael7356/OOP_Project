@@ -1,5 +1,4 @@
-```text
-   selenium
-   beautifulsoup4
-   webdriver-manager
-```
+selenium
+beautifulsoup4
+webdriver-manager
+
