@@ -1,7 +1,7 @@
 <h1>高度客製化自動記帳及對帳軟體</h1>
 
 <h2>介紹</h2>
-<h3>這是一個基於**C++20**標準及**Python自動爬蟲**所打造的智慧記帳及對帳系統，本系統可以自動抓取一卡通、雲端電子發票的資訊，也可以以手動置入檔案的方式讀取銀行消費資訊(目前僅支援中國信託及中華郵政)。</h3>
+<h3>這是一個基於C++20標準及Python自動爬蟲所打造的智慧記帳及對帳系統，本系統可以自動抓取一卡通、雲端電子發票的資訊，也可以以手動置入檔案的方式讀取銀行消費資訊(目前僅支援中國信託及中華郵政)。</h3>
 
 ## 核心功能
 - 一卡通及發票資料自動化爬蟲：利用 Python + Selenium 動態模擬登入，提取其資料並解析。
@@ -62,7 +62,7 @@ uv pip install selenium beautifulsoup4 webdriver-manager requests
 <p>
   1.初次使用會顯示初始設定輸入，需輸入電子發票帳號和密碼、一卡通背後卡號及身分證後四碼<br>
   <img width="783" height="145" alt="image" src="https://github.com/user-attachments/assets/a6b2da41-6024-4d04-b56d-bc3c876001a6" />
-  2.輸入完之後，會進入主畫面，其中有4個主要功能: <br><br>
+  2.輸入完之後，會進入主畫面，其中有5個主要功能: <br><br>
   <details>
     <summary>Transaction(交易)</summary>
     按'1'進入交易功能後，會見到如下畫面<br><br>
@@ -116,7 +116,7 @@ uv pip install selenium beautifulsoup4 webdriver-manager requests
     <summary>Exit with/without store data(退出並保存或不保存)</summary>
     按'5'或'6'退出，如果要將目前的資料存入.csv檔案則選'5'，不想要存入資料則選'6'
   </details>
-
+  
   <h3>注意:</h3>
   此程式非常依賴類別連結，因為不同來源的資料帶有不同的類別標籤，需要以類別連結來將不同來源的類別分類至同一類，如此才能夠配對發票以及消費紀錄
   <img width="1084" height="278" alt="image" src="https://github.com/user-attachments/assets/4a462bc0-67f2-4206-bc29-4827f14dddcb" /><br>
@@ -124,12 +124,27 @@ uv pip install selenium beautifulsoup4 webdriver-manager requests
 
 </p>
 
+
+<h2>如何由iPhone傳遞資料</h2>
+<p>
+  註:Android手機我不確定有沒有此功能，這裡會講iPhone捷徑的設定<br>
+  註2:此資料僅限來自中華郵政的訊息<br>
+  1. 打開 iPhone 內建的 <b>「捷徑 (Shortcuts)」</b> App，點擊下方「自動化」，並點擊右上角「+」新增捷徑。<br><br>
+  2. 點擊<b>「訊息」</b>，發送者選為中華郵政發送訊息用的號碼，包含內容輸入每次發送過來都會包含的詞，並選擇及時執行。<br><br>
+  3. 點擊<b>「繼續」</b>，在選單中選擇<b>「建立新的捷徑」</b>後，在列表搜尋並選擇 <b>「Get content of URL」</b>。<br><br>
+  4. 在<b>「URL」</b>的位置輸入在Google Script中獲取的網頁應用程式網址，點選URL右邊的箭頭，方式選擇<b>「POST」</b>，要求內文為<b>「JSON」</b><br><br>
+  5. 點擊<b>「加入新欄位」</b>旁的<b>「+」</b>，選擇<b>「文字」</b>並在<b>「鍵值」</b>輸入<b>「message」</b>，<b>「文字」</b>欄位選擇<b>「捷徑輸入」</b>，最後點擊<b>「捷徑輸入」</b>並選擇<b>「內容」</b>(類型是訊息)<br>
+  註:完成後可以按下方的播放鍵，並前往google script存放的google sheet查看是否有資料進入
+  <img width="1765" height="93" alt="image" src="https://github.com/user-attachments/assets/d27afb21-a780-41dc-a68c-9d971310c8ae" />
+  正常會長這樣(當有訊息傳入)
+
  <h2>關於Google Script獲取方式</h2>
  
-  <h4>1.建立試算表：打開你的雲端硬碟，建立一個全新的 Google 試算表。 </h4>
-  <h4>2.打開擴充功能：點擊頂部選單的 「擴充功能 (Extensions)」 並點擊 「Apps Script」。 </h4>
-  <h4>3.貼上程式碼：清空裡面預設的 myFunction，將下方的程式碼完整貼進去。</h4>
-  <br>
+  <p>1.建立試算表：打開你的雲端硬碟，建立一個全新的 Google 試算表。 <br>
+  <br>2.打開擴充功能：點擊頂部選單的 「擴充功能 (Extensions)」 並點擊 「Apps Script」。 <br>
+  <br>3.貼上程式碼：清空裡面預設的 myFunction，將下方的程式碼完整貼進去。</p>
+</p>
+  
 <details>
 <summary> 點擊展開查看 Google Apps Script 代碼</summary>
 
@@ -183,7 +198,7 @@ function doGet() {
 ```
 </details>
 
-<h4>
+<p>
   4.點擊右上角的 「部署 (Deploy)」然後點選「新增部署 (New deployment)」。<br><br>
   5.點擊左側的齒輪圖示（選取類型），選擇 「網頁應用程式 (Web app)」。<br><br>
   6.執行身分 (Execute as)：選擇 「我 (Me)」。<br><br>
@@ -191,7 +206,7 @@ function doGet() {
   8.點擊 部署 (Deploy)。<br><br>
   9.點擊部署旁的箭頭並選擇「管理部屬作業」<br><br>
   10.找到「部署作業ID」並複製，此ID即為Google Script
-</h4>
+</p>
 <br>
 
 <h2>
