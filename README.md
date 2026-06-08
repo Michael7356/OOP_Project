@@ -12,7 +12,14 @@
 <h4>
   1.C++編譯器需支援C++20標準或以上<br>
   2.Python版本須為3.8或以上，且須安裝 selenium、 beautifulsoup4和 webdriver-manager庫
+  注:如缺少這三個庫，可在終端機執行此指令
 </h4>
+
+  ```bash
+  git clone [https://github.com/Michael7356/OOP_Project.git](https://github.com/Michael7356/OOP_Project.git)
+cd OOP_Project/Python_auto
+pip install -r requirements.txt
+```
 
  <h2>關於Google Script獲取方式</h2>
  
@@ -83,3 +90,13 @@ function doGet() {
   9.點擊部署旁的箭頭並選擇「管理部屬作業」
   10.找到「部署作業ID」並複製，此ID即為Google Script
 </h4>
+<br>
+
+<h2>
+  授權與宣告
+</h2>
+<h5>
+  本專案內建之 nlohmann/json 採用 MIT License。<br><br>
+  本專案內建之 yhirose/cpp-httplib 採用 MIT License。<br><br>
+  本專案核心代碼由開發者自主設計，僅供學術交流與個人記帳使用。<br><br>
+</h5>
