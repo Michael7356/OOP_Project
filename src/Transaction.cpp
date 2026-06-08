@@ -116,7 +116,7 @@ double Transaction::calculateThisMonthAmount(const std::vector<std::shared_ptr<T
         return std::format("{:%Y%m}", local_time);
     }();
     for (const auto& record : records) {
-        if (record->getDate().substr(0,6) == date && record->getCategory() != "存款入帳" ) totalAmount += record->getAmount() * -1; // We need positive number
+        if (record->getDate().substr(0,6) == date && record->getCategory() != "存款入帳" && record->getNote() != "加值" ) totalAmount += record->getAmount() * -1; // We need positive number
     }
     return totalAmount;
 }
