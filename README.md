@@ -15,8 +15,7 @@
   2.CMake 3.20+<br>
   3.建議開發IDE: JetBrain CLion<br>
   <h3>Python</h3>
-  1.Python版本在3.8以上<br>
-  2.需安裝Selenium、beautifulsoup4和webdriver-manager 庫
+  1.需安裝uv(虛擬環境管理器)
 </h4>
 
 <h2>環境建置</h2>
@@ -60,9 +59,11 @@ uv pip install selenium beautifulsoup4 webdriver-manager requests
 
 <h2>使用說明</h2>
 <p>
-  1.初次使用會顯示初始設定輸入，需輸入電子發票帳號和密碼、一卡通背後卡號及身分證後四碼<br>
-  <img width="783" height="145" alt="image" src="https://github.com/user-attachments/assets/a6b2da41-6024-4d04-b56d-bc3c876001a6" />
+  1.初次使用會顯示初始設定輸入，需輸入電子發票帳號和密碼、一卡通背後卡號、身分證後四碼和Google Script<br>
+  <img width="1147" height="168" alt="image" src="https://github.com/user-attachments/assets/a0ff6991-1417-473d-8e9d-f58909e999fd" /><br>
   2.輸入完之後，會進入主畫面，其中有5個主要功能: <br><br>
+  <img width="667" height="277" alt="image" src="https://github.com/user-attachments/assets/7aec4808-893b-4583-991a-a7134aba6fdf" />
+
   <details>
     <summary>Transaction(交易)</summary>
     按'1'進入交易功能後，會見到如下畫面<br><br>
