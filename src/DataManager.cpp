@@ -53,6 +53,10 @@ void DataManager::checkInitFile(const std::string &filename) {
                 json defaultJson = json::object();
                 newFile << defaultJson.dump(4);
             }
+            else if (filename == "Storage/del.json") {
+                json defaultJson = json::array();
+                newFile << defaultJson.dump(4);
+            }
             newFile.close();
         }
         else {

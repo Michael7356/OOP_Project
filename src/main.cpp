@@ -220,6 +220,7 @@ int main() {
                             }
                             default: {
                                 std::cout << "Invalid input" << std::endl;
+                                std::system("cls");
                             }
                         }
                         break;
@@ -292,6 +293,7 @@ int main() {
                             }
                             else if (chInput == 'N' || chInput == 'n') {
                                 std::cout << "Discard the data" << std::endl;
+                                std::system("cls");
                             }
                             std::cout << "Do you want to add more category ? [y to continue / other keys quit]" << std::endl;
                             chInput = getch();
@@ -416,6 +418,7 @@ int main() {
                     }
                     default: {
                         std::cout << "Not a valid choice" << std::endl;
+                        std::system("cls");
                     }
                 }
                 break;

@@ -37,34 +37,38 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
 
         else if (chInput == 'f' || chInput == 'F') {
             std::vector<std::shared_ptr<Transaction>> tempRecord;
+            std::unordered_set<std::string> typeList;
+            std::vector<std::string> typeIndex;
             std::string input;
             std::cout << "Type the data you want to show" << std::endl;
-            std::cout << "1.Receipt     2.CTBC      3.POST OFFICE     4.IPass"  << std::endl;
+            for (const auto& record : records) {
+                if (typeList.insert(record->getType()).second) {
+                    typeIndex.push_back(record->getType());
+                }
+            }
+            std::ranges::sort(typeIndex);
+            for (int i = 0 ; i < typeIndex.size() ; i ++) std::cout << i << ". " << typeIndex[i] << std::endl;
             if (std::cin.peek() == '\n')  std::cin.ignore();
             std::getline(std::cin, input);
             std::stringstream ss(input);
             std::string temp;
+            std::unordered_set<std::string> typeChosen;
             while (ss >> temp) {
-                std::vector<std::shared_ptr<Transaction>> record;
-                if (temp == "1") {
-                    record = receipt::getSimpleRecords(records);
+                int index;
+                try{
+                    index = std::stoi(temp);
+                }catch (...) {
+                    std::cout << temp << " is not a valid index" << std::endl;
                 }
-                else if (temp == "2") {
-                    record = CTBC::find_CTBC_Record(records);
+                if (index >= 0 && index < typeIndex.size()) {
+                    typeChosen.insert(typeIndex[index]);
                 }
-                else if (temp == "3") {
-                    record = POST::find_POST_Record(records);
-                }
-                else if (temp == "4") {
-                    record = IPass::find_IPass_Record(records);
-                }
-                else {
-                    std::cout << "Invalid input [" << temp << "]" << std::endl;
-                    continue;
-                }
-                tempRecord.insert(tempRecord.end(), record.begin(), record.end());
             }
-            std::ranges::sort(tempRecord, DataManager::compare);
+            for (const auto& record : records) {
+                if (typeChosen.contains(record->getType())) {
+                    tempRecord.push_back(record);
+                }
+            }
             displayInList(tempRecord);
             return ;
         }
@@ -82,7 +86,7 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
             }
         }
         std::cout << "Page: " << page << "/" << maxPage<<  std::endl;
-        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data, 's' to search data or press q to quit]" << std::endl;
+        std::cout << "[Press 'n' to next page, 'l' to last page, 'd' to delete data, 'f' to filter data, 's' to search data, 'j' to jump page or press q to quit]" << std::endl;
         chInput = getch();
         if (chInput == 'd' || chInput == 'D') {
             chInput = '-';
@@ -129,6 +133,29 @@ void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>&
                 }
             }
             displayInList(tempRecord);
+        }
+        else if (chInput == 'j' || chInput == 'J') {
+            std::string input;
+            bool valid = true;
+            std::cout << "Jump to page: ";
+            if (std::cin.peek() == '\n')  std::cin.ignore();
+            std::getline(std::cin, input);
+            int index1;
+            try {
+                index1 = std::stoi(input);
+            }catch (...) {
+                std::cout << input << " is not a valid index" << std::endl;
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                valid = false;
+            }
+            if (index1 >= 0 && index1 <= maxPage) page = index1;
+            else {
+                if (valid) {
+                    std::cout << input << " is not a valid index" << std::endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                }
+            }
+            chInput = '-';
         }
         std::system("cls");
     }while (chInput);

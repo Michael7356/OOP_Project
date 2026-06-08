@@ -77,10 +77,7 @@ bool Deposit::checkUnique(const std::shared_ptr<Transaction> &record, const std:
 }
 
 bool Deposit::callPython(std::string filename) {
-    std::string Pypath = R"(..\Python_auto\.venv\Scripts\python.exe)";
-    std::string script = "..\\Python_auto\\" + filename;
-
-    std::string command = Pypath + " " + script;
+    std::string command = "uv run --with selenium --with beautifulsoup4 --with webdriver-manager --with ddddocr --with requests ..\\Python_auto\\" + filename;
     std::cout << "Hold on a second" << std::endl;
 
     int result = std::system(command.c_str());
@@ -92,8 +89,7 @@ bool Deposit::callPython(std::string filename) {
         while (std::cin >> input) {
             if(input == "y" || input == "Y" || input == "N"|| input == "n") {
                 if (input == "y" || input == "Y") {
-                    callPython(filename);
-                    break;
+                    return callPython(filename);
                 }
                 return false;
             }
@@ -127,7 +123,7 @@ std::vector<std::shared_ptr<Transaction>> CTBC::get_Record() const {
 std::vector<std::shared_ptr<Transaction>> CTBC::find_CTBC_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
-        if (transaction->getType().find("CTBC") != std::string::npos && transaction->getType() != "Receipt(CTBC)") {
+        if (transaction->getType().find("CTBC") != std::string::npos) {
             tempRecord.push_back(transaction);
         }
     }
@@ -168,7 +164,7 @@ std::vector<std::shared_ptr<Transaction>> POST::get_Record() const {
 std::vector<std::shared_ptr<Transaction>> POST::find_POST_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
-        if (transaction->getType().find("POST") != std::string::npos && transaction->getType() != "Receipt(POST)") {
+        if (transaction->getType().find("POST") != std::string::npos) {
             tempRecord.push_back(transaction);
         }
     }
@@ -317,7 +313,7 @@ std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::ve
     switch (input) {
         case 1: {
             for (const auto& transaction : transactions) {
-                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "Receipt(IPass)") {
+                if (transaction->getType().find("IPass") != std::string::npos ) {
                     tempRecord.push_back(transaction);
                 }
             }
@@ -325,7 +321,7 @@ std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::ve
         }
         case 2: {
             for (const auto& transaction : transactions) {
-                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "IPass(Transportation)" && transaction->getType() != "Receipt(IPass)") {
+                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "IPass(Transportation)") {
                     tempRecord.push_back(transaction);
                 }
             }
