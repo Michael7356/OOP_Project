@@ -4,7 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <filesystem>
-#include "json.hpp"
+#include "../include/json.hpp"
 
 using json = nlohmann::json;
 std::map<std::string, std::string> DataManager::data;
@@ -39,6 +39,10 @@ void DataManager::checkInitFile(const std::string &filename) {
                 std::cin >> input; initConfig["Account"] = input;
                 std::cout << "Your password [財政部電子發票平台密碼]: ";
                 std::cin >> input; initConfig["Password"] = input;
+                std::cout << "Your IPass card number[一卡通背後卡號]: ";
+                std::cin >> input; initConfig["IPassCardNumber"] = input;
+                std::cout << "Your ID card's last four digits[身分證後四碼(用於查詢一卡通資料)]: ";
+                std::cin >> input; initConfig["IDLastFourDigits"] = input;
                 std::cout << "Your google script url [Read Readme.md if you don't know what it is]: ";
                 std::cin >> input; initConfig["google_script_id"] = input;
                 json j = initConfig;

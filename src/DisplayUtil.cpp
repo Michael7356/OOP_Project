@@ -14,13 +14,20 @@
 #include <conio.h>
 
 #include "Deposit.h"
-#include "httplib.h"
+#include "../include/httplib.h"
 #include "DataManager.h"
 
 void DisplayUtil::displayInList(const std::vector<std::shared_ptr<Transaction>>& records) {
     std::system("cls");
     int RecordSize = records.size(), page = 1, maxPage = (RecordSize + 10 - 1) / 10;
     char chInput = '-';
+    if (RecordSize == 0) {
+        std::cout << "[No data here]" << std::endl;
+        std::cout << "Press any key to quit" << std::endl;
+        chInput = getch();
+        std::system("cls");
+        return;
+    }
     do {
         if (chInput == 'q' || chInput == 'Q') break;
 

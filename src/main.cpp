@@ -1,17 +1,17 @@
+#include "../include/httplib.h"
+#include "../include/json.hpp"
 #include <vector>
 #include <iostream>
+#include <windows.h>
+#include <regex>
+#include <fstream>
+#include <conio.h>
 #include "Transaction.h"
 #include "PdfParser.h"
 #include "DataManager.h"
-#include <windows.h>
-#include <regex>
-#include "httplib.h"
-#include "json.hpp"
-#include <fstream>
-#include <conio.h>
-
 #include "Deposit.h"
 #include "DisplayUtil.h"
+
 
 using json = nlohmann::json;
 
@@ -160,9 +160,9 @@ int main() {
                         std::string d,c,n,t,aStr;
                         double a = 0;
                         char confirm = 'n';
+                        if (std::cin.peek() == '\n')  std::cin.ignore();
                         do {
                             std::string today = getTodayDate();
-                            if (std::cin.peek() == '\n')  std::cin.ignore();
                             d=defaultInput("Date[YYYYMMDD]: ", today);
                             t=defaultInput("Time[HH:MM]: ", "No Time");
                             c=defaultInput("Category: ", "No Category");
@@ -177,14 +177,24 @@ int main() {
                                       << "\nAmount: " << a
                                       << "\nNote: " << n << std::endl;
                             std::cout << "Is this correct data ? [y to complete / n to re-enter data / d to discard data(quit) ]" << std::endl;
-                            std::cin>>confirm;
-                            confirm = tolower(confirm);
-                            if (confirm == 'd') {
+                            confirm = getch();
+                            if (confirm == 'd' || confirm == 'D') {
                                 std::cout << "Data was discarded " << std::endl;
                                 break;
                             }
-                        }while (confirm != 'y');
-                        if (confirm == 'y') {
+                            if (confirm == 'y' || confirm == 'Y') {
+                                break;
+                            }
+                            if (confirm == 'n' || confirm == 'N') {
+                                system("cls");
+                                std::cout << "[Re-enter data]" << std::endl;
+                                continue;
+                            }
+                            std::cout << "Invalid input " << std::endl;
+                            std::cout << "Data has been discarded" << std::endl;
+                            break;
+                        }while (true);
+                        if (confirm == 'y' || confirm == 'Y') {
                             myBookkeeping.push_back(make_shared<Transaction>("Other", d, t, c, a, n));
                             std::cout << "Successfully add into data" << std::endl;
                         }

@@ -3,17 +3,17 @@ project(OOP_Project)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(OOP_Project Transaction.h
-        Transaction.cpp
-        main.cpp
-        DataManager.cpp
-        DataManager.h
-        PdfParser.cpp
-        PdfParser.h
-        DisplayUtil.cpp
-        DisplayUtil.h
-        Deposit.cpp
-        Deposit.h
+add_executable(OOP_Project src/Transaction.h
+        src/Transaction.cpp
+        src/main.cpp
+        src/DataManager.cpp
+        src/DataManager.h
+        src/PdfParser.cpp
+        src/PdfParser.h
+        src/DisplayUtil.cpp
+        src/DisplayUtil.h
+        src/Deposit.cpp
+        src/Deposit.h
 )
 
 set(MSYS_PATH "C:/msys64/ucrt64")

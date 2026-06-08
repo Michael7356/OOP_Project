@@ -4,10 +4,8 @@
 #include <poppler-document.h>
 #include <poppler-page.h>
 #include <sstream>
-#include <map>
-#include <optional>
-#include "httplib.h"
-#include "json.hpp"
+#include "../include/httplib.h"
+#include "../include/json.hpp"
 #include <filesystem>
 
 using json = nlohmann::json;
@@ -16,7 +14,6 @@ namespace fs = std::filesystem;
 struct Config {
     std::string script_ID;
     std::string csv_filename;
-    std::string deposit;
     std::string cate_path;
 };
 
@@ -27,7 +24,7 @@ PdfParser::Config PdfParser::loadConfig() {
     }
     json j;
     inFile >> j;
-    return {j["google_script_id"], j["csv_path"], j["deposit"],};
+    return {j["google_script_id"], j["csv_path"]};
 };
 
 std::vector<std::shared_ptr<Transaction>> PdfParser::parseBankStatement(const std::string& filepath, const std::string& password,const std::string& type) {

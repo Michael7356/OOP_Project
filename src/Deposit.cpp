@@ -1,5 +1,5 @@
 #include "Deposit.h"
-#include "httplib.h"
+#include "../include/httplib.h"
 #include "PdfParser.h"
 #include "DataManager.h"
 
@@ -127,7 +127,7 @@ std::vector<std::shared_ptr<Transaction>> CTBC::get_Record() const {
 std::vector<std::shared_ptr<Transaction>> CTBC::find_CTBC_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
-        if (transaction->getType().find("CTBC") != std::string::npos) {
+        if (transaction->getType().find("CTBC") != std::string::npos && transaction->getType() != "Receipt(CTBC)") {
             tempRecord.push_back(transaction);
         }
     }
@@ -168,7 +168,7 @@ std::vector<std::shared_ptr<Transaction>> POST::get_Record() const {
 std::vector<std::shared_ptr<Transaction>> POST::find_POST_Record(const std::vector<std::shared_ptr<Transaction>> &transactions) {
     std::vector<std::shared_ptr<Transaction>> tempRecord;
     for (const auto& transaction : transactions) {
-        if (transaction->getType().find("POST") != std::string::npos) {
+        if (transaction->getType().find("POST") != std::string::npos && transaction->getType() != "Receipt(POST)") {
             tempRecord.push_back(transaction);
         }
     }
@@ -317,7 +317,7 @@ std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::ve
     switch (input) {
         case 1: {
             for (const auto& transaction : transactions) {
-                if (transaction->getType().find("IPass") != std::string::npos) {
+                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "Receipt(IPass)") {
                     tempRecord.push_back(transaction);
                 }
             }
@@ -325,7 +325,7 @@ std::vector<std::shared_ptr<Transaction>> IPass::find_IPass_Record(const std::ve
         }
         case 2: {
             for (const auto& transaction : transactions) {
-                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "IPass(Transportation)") {
+                if (transaction->getType().find("IPass") != std::string::npos && transaction->getType() != "IPass(Transportation)" && transaction->getType() != "Receipt(IPass)") {
                     tempRecord.push_back(transaction);
                 }
             }

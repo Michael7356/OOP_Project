@@ -6,12 +6,24 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+import json
 
 # ==========================================
 #  使用者設定區：請在這裡輸入你的一卡通卡號
 # ==========================================
-CARD_NUMBER = "1501102503310516"
-IDL4 = "6212"
+
+def load_config():
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_path, "..", "cmake-build-debug/Storage", "config.json")
+
+    with open(config_path, "r", encoding='utf-8') as f:
+        config = json.load(f)
+    return config
+config = load_config()
+
+CARD_NUMBER = config["IPassCardNumber"]
+IDL4 = config["IDLastFourDigits"]
+
 IPASS_URL = "https://www.i-pass.com.tw/Inquire/"
 
 

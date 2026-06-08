@@ -1,19 +1,15 @@
 #include "Transaction.h"
-
+#include "DisplayUtil.h"
 #include <conio.h>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <utility>
 #include <vector>
-#include <utility>
 #include <sstream>
-#include <poppler/cpp/poppler-document.h>
 #include <poppler/cpp/poppler-page.h>
-
-#include "DisplayUtil.h"
-#include "httplib.h"
-#include "json.hpp"
+#include "../include/httplib.h"
+#include "../include/json.hpp"
 
 #define RESET   "\033[0m"
 #define RED     "\033[31m"
